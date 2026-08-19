@@ -3,9 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light" />
   <meta name="theme-color" content="#071710" />
   <meta name="description" content="Fila Cero Gran Concepción conecta personas con horas liberadas en centros y servicios de las comunas del área metropolitana." />
   <title>Fila Cero Gran Concepción — Una hora acaba de liberarse</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><rect width=%2264%22 height=%2264%22 rx=%2218%22 fill=%22%23071710%22/><text x=%2232%22 y=%2244%22 text-anchor=%22middle%22 font-size=%2238%22 font-family=%22Arial%22 font-weight=%22900%22 fill=%22%2339d47d%22>0</text></svg>" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -94,6 +96,16 @@
       </aside>
     </section>
 
+
+    <section class="value-rail" aria-label="Ventajas de Fila Cero">
+      <div class="value-rail-inner">
+        <article><span class="value-icon">⚡</span><div><strong>Reserva rápida</strong><small>Cupos activos, sin revisar agendas completas.</small></div></article>
+        <article><span class="value-icon">◎</span><div><strong>Ubicación clara</strong><small>Dirección, comuna y mapa antes de reservar.</small></div></article>
+        <article><span class="value-icon">◫</span><div><strong>Perfiles públicos</strong><small>Conoce al centro y revisa su portafolio.</small></div></article>
+        <article><span class="value-icon">↻</span><div><strong>En tiempo real</strong><small>Los nuevos cupos aparecen automáticamente.</small></div></article>
+      </div>
+    </section>
+
     <section class="live-strip">
       <div class="live-strip-inner">
         <span><b></b> Marketplace actualizado</span>
@@ -150,6 +162,29 @@
         <div class="empty-icon">◎</div>
         <h3>Aún no hay perfiles públicos</h3>
         <p>Cuando un centro complete su perfil, aparecerá automáticamente en este directorio.</p>
+      </div>
+    </section>
+
+
+    <section class="section audience-section" aria-labelledby="audienceTitle">
+      <div class="audience-heading">
+        <span class="eyebrow">DOS FORMAS DE USAR FILA CERO</span>
+        <h2 id="audienceTitle">Una experiencia simple para ambos lados.</h2>
+        <p>Quien busca una hora encuentra disponibilidad real. Quien ofrece atención recupera espacios que de otro modo quedarían vacíos.</p>
+      </div>
+      <div class="audience-grid">
+        <article class="audience-card audience-card-person">
+          <div class="audience-card-top"><span class="audience-number">01</span><span class="audience-pill">PARA PERSONAS</span></div>
+          <h3>Encuentra una hora cuando la necesitas.</h3>
+          <p>Filtra por servicio, comuna y horario. Revisa el perfil, el mapa y el precio antes de reservar.</p>
+          <a href="#disponibles" class="audience-link">Explorar cupos <span>→</span></a>
+        </article>
+        <article class="audience-card audience-card-business">
+          <div class="audience-card-top"><span class="audience-number">02</span><span class="audience-pill">PARA CENTROS</span></div>
+          <h3>Convierte una cancelación en una nueva oportunidad.</h3>
+          <p>Publica cupos liberados, administra reservas y muestra tu trabajo desde un perfil profesional.</p>
+          <a href="login.html" class="audience-link">Crear perfil profesional <span>→</span></a>
+        </article>
       </div>
     </section>
 
@@ -214,10 +249,22 @@
 
   <div class="toast hidden" id="toast" aria-live="polite"></div>
 
-  <footer class="site-footer" data-fc-footer="true">
-    <div class="site-footer-brand"><span class="brand-mark">0</span><span><strong>FILA CERO</strong><small>Gran Concepción</small></span></div>
-    <div class="site-footer-copy"><span>Disponibilidad de último minuto, en un solo lugar.</span><small>Fila Cero no almacena fichas clínicas.</small></div>
-    <a class="developer-credit" href="https://www.instagram.com/dev_web_ccp/" target="_blank" rel="noopener noreferrer" aria-label="Instagram de Dev Web CCP"><span class="developer-dot">●</span><span>Hecho por <strong>Dev Web CCP</strong></span><span aria-hidden="true">↗</span></a>
+  <footer class="site-footer site-footer-v12" data-fc-footer="true">
+    <div class="site-footer-brand">
+      <span class="brand-mark">0</span>
+      <span><strong>FILA CERO</strong><small>Gran Concepción</small></span>
+    </div>
+    <div class="site-footer-copy">
+      <span>Horas disponibles de último minuto, en un solo lugar.</span>
+      <small>Fila Cero facilita la conexión entre personas, centros y profesionales. No almacena fichas clínicas.</small>
+    </div>
+    <div class="developer-signature">
+      <span class="developer-signature-label">DISEÑO Y DESARROLLO</span>
+      <a class="developer-credit developer-credit-web" href="https://dev-web-ccp.vercel.app/" target="_blank" rel="noopener noreferrer" aria-label="Sitio web de Dev Web CCP">
+        <span class="developer-dot">●</span><span>Hecho por <strong>Dev Web CCP</strong></span><span aria-hidden="true">↗</span>
+      </a>
+      <a class="developer-instagram" href="https://www.instagram.com/dev_web_ccp/" target="_blank" rel="noopener noreferrer" aria-label="Instagram de Dev Web CCP">@dev_web_ccp ↗</a>
+    </div>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
