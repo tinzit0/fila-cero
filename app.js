@@ -77,6 +77,84 @@ function humanError(err){const msg=String(err?.message||err||'Error inesperado')
 
 async function initTopbar(){const link=document.querySelector('[data-account-link]');if(!link||!window.FCAUTH)return;try{const session=await FCAUTH.getSession();link.href=session?'profesional.html':'login.html';link.textContent=session?'Mi empresa':'Crear cuenta / Iniciar sesión'}catch{link.href='login.html'}}
 
+
+function initMobileNavigation(){
+  document.querySelectorAll('.topbar').forEach((header,index)=>{
+    const nav=header.querySelector(':scope > nav');
+    if(!nav||header.querySelector('.mobile-menu-toggle'))return;
+    const navId=nav.id||`fc-primary-nav-${index+1}`;
+    nav.id=navId;
+    nav.classList.add('topbar-nav');
+
+    const dashboardNav=document.querySelector('.dashboard-nav');
+    if(dashboardNav&&!nav.querySelector('.mobile-nav-sections')){
+      const sections=document.createElement('div');
+      sections.className='mobile-nav-sections';
+      const label=document.createElement('span');
+      label.className='mobile-nav-section-label';
+      label.textContent='Secciones del panel';
+      sections.appendChild(label);
+      dashboardNav.querySelectorAll('a[href^="#"]').forEach(source=>{
+        const clone=source.cloneNode(true);
+        clone.classList.add('mobile-section-link');
+        sections.appendChild(clone);
+      });
+      nav.prepend(sections);
+    }
+
+    const toggle=document.createElement('button');
+    toggle.type='button';
+    toggle.className='mobile-menu-toggle';
+    toggle.setAttribute('aria-controls',navId);
+    toggle.setAttribute('aria-expanded','false');
+    toggle.setAttribute('aria-label','Abrir menú');
+    toggle.innerHTML='<span></span><span></span><span></span>';
+    header.insertBefore(toggle,nav);
+
+    const setOpen=open=>{
+      header.classList.toggle('nav-open',open);
+      document.body.classList.toggle('mobile-nav-open',open);
+      toggle.setAttribute('aria-expanded',String(open));
+      toggle.setAttribute('aria-label',open?'Cerrar menú':'Abrir menú');
+    };
+
+    toggle.addEventListener('click',()=>setOpen(!header.classList.contains('nav-open')));
+    nav.addEventListener('click',event=>{
+      if(event.target.closest('a,button'))setOpen(false);
+    });
+    document.addEventListener('keydown',event=>{if(event.key==='Escape')setOpen(false)});
+    document.addEventListener('click',event=>{
+      if(header.classList.contains('nav-open')&&!header.contains(event.target))setOpen(false);
+    });
+    window.addEventListener('resize',()=>{if(window.innerWidth>820)setOpen(false)},{passive:true});
+  });
+}
+
+function initSiteFooter(){
+  const instagram='https://www.instagram.com/dev_web_ccp/';
+  let footer=document.querySelector('footer.site-footer, footer[data-fc-footer]');
+  if(!footer){
+    footer=document.createElement('footer');
+    footer.className='site-footer';
+    footer.dataset.fcFooter='true';
+    footer.innerHTML=`<div class="site-footer-brand"><span class="brand-mark">0</span><span><strong>FILA CERO</strong><small>Gran Concepción</small></span></div><div class="site-footer-copy"><span>Disponibilidad de último minuto, en un solo lugar.</span><small>Fila Cero no almacena fichas clínicas.</small></div><a class="developer-credit" href="${instagram}" target="_blank" rel="noopener noreferrer" aria-label="Instagram de Dev Web CCP"><span class="developer-dot">●</span><span>Hecho por <strong>Dev Web CCP</strong></span><span aria-hidden="true">↗</span></a>`;
+    document.body.appendChild(footer);
+    return;
+  }
+
+  footer.classList.add('site-footer');
+  if(!footer.querySelector('.developer-credit')){
+    const credit=document.createElement('a');
+    credit.className='developer-credit';
+    credit.href=instagram;
+    credit.target='_blank';
+    credit.rel='noopener noreferrer';
+    credit.setAttribute('aria-label','Instagram de Dev Web CCP');
+    credit.innerHTML='<span class="developer-dot">●</span><span>Hecho por <strong>Dev Web CCP</strong></span><span aria-hidden="true">↗</span>';
+    footer.appendChild(credit);
+  }
+}
+
 async function initMarketplace(){
   const grid=document.getElementById('slotsGrid');if(!grid||!sb)return;
   const serviceFilter=document.getElementById('serviceFilter'),cityFilter=document.getElementById('cityFilter'),timeFilter=document.getElementById('timeFilter'),sortSelect=document.getElementById('sortSelect'),resultsText=document.getElementById('resultsText'),empty=document.getElementById('emptyState'),modal=document.getElementById('bookingModal'),mapModal=document.getElementById('mapModal'),businessesGrid=document.getElementById('businessesGrid'),businessesEmpty=document.getElementById('businessesEmpty');
@@ -354,6 +432,8 @@ async function initAdmin(){
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
+  initMobileNavigation();
+  initSiteFooter();
   initTopbar();
   initMarketplace().catch(console.error);
   initProfessional().catch(console.error);
