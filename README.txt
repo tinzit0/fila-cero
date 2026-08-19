@@ -1,4 +1,4 @@
-FILA CERO v0.6 — SUPABASE
+FILA CERO v0.7 — SUPABASE
 
 Esta versión dejó de usar localStorage como base principal para empresas,
 cupos y reservas. Ahora utiliza Supabase Auth + PostgreSQL + Realtime + Storage.

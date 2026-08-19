@@ -1,185 +1,58 @@
-============================================================
-FILA CERO v0.6 — SUPABASE REAL
-Gran Concepción
-============================================================
+FILA CERO v0.7 — SUPABASE COMPARTIDO
+====================================
 
-ESTE PROYECTO YA ESTÁ CONFIGURADO CON:
+Esta versión está preparada para usar el MISMO proyecto Supabase que tus otras apps,
+sin compartir tablas de negocio con ellas.
 
-Supabase URL:
-https://kxldsjodgfonrrlwjbws.supabase.co
+RECURSOS EXCLUSIVOS DE FILA CERO
+---------------------------------
+public.fila_cero_businesses
+public.fila_cero_slots
+public.fila_cero_reservations
+public.fila_cero_book_slot(...)
+Storage: fila-cero-portfolio
 
-Publishable key:
-sb_publishable_J5s_2YqtASIYSqu2k00SGA_copdr39x
+IMPORTANTE
+----------
+1) NO borres las tablas antiguas businesses, slots o reservations.
+2) NO hace falta crear otro proyecto Supabase.
+3) Fila Cero NO crea trigger global sobre auth.users.
+4) El perfil fila_cero_businesses se crea cuando el usuario entra a Fila Cero.
+5) La misma cuenta Auth puede existir en tu Supabase compartido sin convertirse
+   automáticamente en empresa de Fila Cero.
 
-IMPORTANTE:
-La publishable key sí puede estar en el frontend cuando RLS está habilitado.
-NUNCA coloques una Secret Key o Service Role Key dentro de config.js.
+INSTALACIÓN
+-----------
+1. Supabase > SQL Editor > New query.
+2. Copia TODO el archivo SQL-EDITOR-FILA-CERO-V0.7.sql.
+3. Presiona Run.
+4. Comprueba en Table Editor que aparezcan:
+   - fila_cero_businesses
+   - fila_cero_slots
+   - fila_cero_reservations
+5. Authentication > URL Configuration > Redirect URLs:
+   agrega:
+   https://fila-cero.concepcion.workers.dev/profesional.html
+6. NO cambies obligatoriamente el Site URL global, porque el proyecto Supabase
+   lo comparten otras aplicaciones.
 
-------------------------------------------------------------
-PASO 1 — CREAR LA BASE DE DATOS
-------------------------------------------------------------
+GOOGLE LOGIN
+------------
+El código usa redirectTo explícito hacia:
+https://fila-cero.concepcion.workers.dev/profesional.html
 
-1. Entra a tu proyecto de Supabase.
-2. Abre SQL Editor.
-3. Presiona New query.
-4. Abre el archivo:
+En Google Cloud el callback de Supabase sigue siendo:
+https://kxldsjodgfonrrlwjbws.supabase.co/auth/v1/callback
 
-   supabase-fila-cero.sql
+CLOUDFLARE / GITHUB
+-------------------
+Sube el contenido de esta carpeta al repositorio:
+https://github.com/tinzit0/fila-cero.git
 
-5. Copia TODO su contenido.
-6. Pégalo en SQL Editor.
-7. Presiona RUN.
+Luego tu despliegue seguirá funcionando en:
+https://fila-cero.concepcion.workers.dev/
 
-El script crea:
-
-- public.businesses
-- public.slots
-- public.reservations
-- Función book_slot() contra doble reserva
-- Trigger para crear empresa al crear un usuario
-- RLS (Row Level Security)
-- Bucket Storage: business-portfolio
-- Políticas de subida de imágenes
-- Supabase Realtime para empresas, cupos y reservas
-
-------------------------------------------------------------
-PASO 2 — AUTH POR CORREO
-------------------------------------------------------------
-
-Después de ejecutar el SQL, Crear cuenta / Iniciar sesión ya usa
-Supabase Auth en vez de localStorage.
-
-Si Email Confirmation está activado en Supabase, una cuenta nueva
-tendrá que confirmar su correo antes de iniciar sesión.
-
-------------------------------------------------------------
-PASO 3 — ABRIR FILA CERO LOCALMENTE
-------------------------------------------------------------
-
-NO uses doble clic en index.html para probar Google Login.
-
-Ejecuta:
-
-   ABRIR-FILA-CERO.bat
-
-La aplicación intentará abrirse en:
-
-   http://localhost:5500
-
-El BAT intenta usar primero Python y, si no existe, Node/npx.
-
-------------------------------------------------------------
-PASO 4 — ACTIVAR LOGIN CON GOOGLE
-------------------------------------------------------------
-
-En Google Cloud Console:
-
-1. Crea/configura una aplicación OAuth.
-2. Crea un OAuth Client ID de tipo Web application.
-3. Authorized JavaScript origins:
-
-   http://localhost:5500
-
-4. Authorized redirect URI de Supabase:
-
-   https://kxldsjodgfonrrlwjbws.supabase.co/auth/v1/callback
-
-Luego, en Supabase:
-
-Authentication > Providers > Google
-
-- Activa Google.
-- Pega el Google Client ID.
-- Pega el Google Client Secret.
-- Guarda.
-
-Después ve a:
-
-Authentication > URL Configuration
-
-Para desarrollo configura/autoriza:
-
-Site URL:
-   http://localhost:5500
-
-Redirect URL adicional:
-   http://localhost:5500/profesional.html
-
-Cuando publiques Fila Cero en un dominio, agrega también el dominio
-real y su URL profesional.html.
-
-------------------------------------------------------------
-PASO 5 — PROBAR EL FLUJO
-------------------------------------------------------------
-
-1. Abre Fila Cero.
-2. Crear cuenta.
-3. Ingresa nombre de empresa, email y contraseña.
-4. Inicia sesión.
-5. Completa Perfil público:
-   - Nombre
-   - Rubro
-   - Descripción
-   - Comuna
-   - Sector
-   - Dirección
-   - WhatsApp
-   - Instagram
-   - Web
-   - Portafolio
-6. Guarda el perfil.
-7. Añade una hora.
-8. Abre el Marketplace en otra ventana/celular.
-9. La hora debe aparecer desde Supabase.
-10. Reserva el cupo.
-11. En el dashboard de la empresa aparecerá la reserva.
-
-------------------------------------------------------------
-PORTAFOLIO
-------------------------------------------------------------
-
-Ahora puedes subir hasta 3 imágenes directamente.
-Formatos:
-- JPG
-- PNG
-- WEBP
-
-Máximo: 5 MB por imagen.
-
-Se guardan en:
-Storage > business-portfolio
-
-Cada usuario solo puede subir/modificar/eliminar archivos dentro de
-su propia carpeta de Auth UID.
-
-------------------------------------------------------------
-REALTIME
-------------------------------------------------------------
-
-Cuando una empresa publica una hora:
-
-EMPRESA -> SUPABASE -> MARKETPLACE
-
-Los clientes conectados reciben la actualización sin depender del
-localStorage del computador de la empresa.
-
-Cuando alguien reserva:
-
-CLIENTE -> book_slot() -> RESERVA + SLOT=RESERVED
-
-La función bloquea el cupo durante la operación para reducir el riesgo
-de doble reserva.
-
-------------------------------------------------------------
-GOOGLE MAPS
-------------------------------------------------------------
-
-Google Maps sigue separado de Supabase.
-
-Para incrustar mapas dentro de Fila Cero agrega en config.js:
-
-googleMapsApiKey: "TU_API_KEY"
-
-Sin API key, el botón "Abrir en Google Maps" sigue funcionando.
-
-============================================================
+SEGURIDAD
+---------
+La publishable key sí puede estar en config.js con RLS habilitado.
+NUNCA pongas service_role, secret key ni Client Secret de Google en el frontend.

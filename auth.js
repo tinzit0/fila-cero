@@ -1,5 +1,9 @@
 (function(){
   const sb = window.FC_SUPABASE;
+  const cfg = window.FC_CONFIG || {};
+  const db = cfg.db || {};
+  const T_BUSINESSES = db.businessesTable || 'fila_cero_businesses';
+  const PORTFOLIO_BUCKET = db.portfolioBucket || 'fila-cero-portfolio';
   const COMMUNES=['Concepción','Talcahuano','Hualpén','San Pedro de la Paz','Chiguayante','Penco','Tomé','Hualqui','Coronel','Lota','Santa Juana'];
 
   function assertClient(){
@@ -20,15 +24,39 @@
     return data?.user || null;
   }
 
+  // IMPORTANTE: no existe trigger global de auth.users para Fila Cero.
+  // El perfil se crea únicamente cuando una persona entra a ESTA aplicación.
   async function ensureBusiness(user,businessName=''){
     if(!user) return null;
-    let {data,error}=await sb.from('businesses').select('*').eq('owner_id',user.id).maybeSingle();
+
+    let {data,error}=await sb.from(T_BUSINESSES).select('*').eq('owner_id',user.id).maybeSingle();
     if(error) throw error;
     if(data) return normalizeBusiness(data);
 
-    const fallback=(businessName || user.user_metadata?.business_name || user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Mi empresa').trim();
-    const created=await sb.from('businesses').insert({owner_id:user.id,name:fallback}).select().single();
-    if(created.error) throw created.error;
+    const fallback=(
+      businessName ||
+      user.user_metadata?.fila_cero_business_name ||
+      user.user_metadata?.full_name ||
+      user.user_metadata?.name ||
+      user.email?.split('@')[0] ||
+      'Mi empresa'
+    ).trim();
+
+    const created=await sb
+      .from(T_BUSINESSES)
+      .insert({owner_id:user.id,name:fallback})
+      .select()
+      .single();
+
+    if(created.error){
+      // Si dos pestañas intentaron crear el perfil a la vez, recuperar el ya creado.
+      if(String(created.error.code)==='23505'){
+        const retry=await sb.from(T_BUSINESSES).select('*').eq('owner_id',user.id).single();
+        if(retry.error) throw retry.error;
+        return normalizeBusiness(retry.data);
+      }
+      throw created.error;
+    }
     return normalizeBusiness(created.data);
   }
 
@@ -43,11 +71,21 @@
     const {data,error}=await sb.auth.signUp({
       email:String(email||'').trim().toLowerCase(),
       password:String(password||''),
-      options:{data:{business_name:String(businessName||'Mi empresa').trim()}}
+      options:{
+        emailRedirectTo:new URL('profesional.html',getAppBaseUrl()).href,
+        data:{
+          fila_cero_business_name:String(businessName||'Mi empresa').trim(),
+          fila_cero_source:'fila-cero'
+        }
+      }
     });
     if(error) throw error;
     if(data?.session && data?.user) await ensureBusiness(data.user,businessName);
-    return {user:data?.user||null,session:data?.session||null,needsEmailConfirmation:!!data?.user&&!data?.session};
+    return {
+      user:data?.user||null,
+      session:data?.session||null,
+      needsEmailConfirmation:!!data?.user&&!data?.session
+    };
   }
 
   async function login(email,password){
@@ -71,8 +109,18 @@
     const user=await currentUser();
     if(!user) throw new Error('Debes iniciar sesión.');
     const clean={...patch};
-    delete clean.id; delete clean.owner_id; delete clean.created_at; delete clean.updated_at;
-    const {data,error}=await sb.from('businesses').update(clean).eq('owner_id',user.id).select().single();
+    delete clean.id;
+    delete clean.owner_id;
+    delete clean.created_at;
+    delete clean.updated_at;
+
+    const {data,error}=await sb
+      .from(T_BUSINESSES)
+      .update(clean)
+      .eq('owner_id',user.id)
+      .select()
+      .single();
+
     if(error) throw error;
     return normalizeBusiness(data);
   }
@@ -80,17 +128,32 @@
   async function getBusiness(id){
     assertClient();
     if(!id) return null;
-    const {data,error}=await sb.from('businesses').select('*').eq('id',id).maybeSingle();
+    const {data,error}=await sb.from(T_BUSINESSES).select('*').eq('id',id).maybeSingle();
     if(error) throw error;
     return data?normalizeBusiness(data):null;
+  }
+
+  function getAppBaseUrl(){
+    // En desarrollo local, regresar al localhost actual.
+    if(location.protocol!=='file:' && ['localhost','127.0.0.1'].includes(location.hostname)){
+      return `${location.origin}/`;
+    }
+
+    const configured=String(cfg.appBaseUrl||'').trim();
+    if(configured){
+      try{return new URL(configured).href}catch(_e){}
+    }
+
+    if(location.protocol!=='file:') return new URL('.',window.location.href).href;
+    return 'https://fila-cero.concepcion.workers.dev/';
   }
 
   async function googleLogin(){
     assertClient();
     if(location.protocol==='file:'){
-      throw new Error('Google Login necesita abrir Fila Cero desde http://localhost o desde tu dominio, no con doble clic en el HTML. Revisa README-SUPABASE.txt.');
+      throw new Error('Google Login necesita abrir Fila Cero desde un dominio HTTPS o localhost, no con doble clic en el HTML.');
     }
-    const redirectTo=new URL('profesional.html',window.location.href).href;
+    const redirectTo=new URL('profesional.html',getAppBaseUrl()).href;
     const {data,error}=await sb.auth.signInWithOAuth({
       provider:'google',
       options:{redirectTo}
@@ -112,17 +175,19 @@
     assertClient();
     const user=await currentUser();
     if(!user) throw new Error('Debes iniciar sesión para subir imágenes.');
+
     const selected=Array.from(files||[]).slice(0,3);
     const urls=[];
     for(let i=0;i<selected.length;i++){
       const file=selected[i];
       if(file.size>5*1024*1024) throw new Error(`${file.name}: máximo 5 MB por imagen.`);
       if(!['image/jpeg','image/png','image/webp'].includes(file.type)) throw new Error(`${file.name}: usa JPG, PNG o WEBP.`);
+
       const ext=(file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'');
       const path=`${user.id}/${Date.now()}-${i}-${Math.random().toString(36).slice(2,8)}.${ext}`;
-      const {error}=await sb.storage.from('business-portfolio').upload(path,file,{cacheControl:'3600',upsert:false});
+      const {error}=await sb.storage.from(PORTFOLIO_BUCKET).upload(path,file,{cacheControl:'3600',upsert:false});
       if(error) throw error;
-      const {data}=sb.storage.from('business-portfolio').getPublicUrl(path);
+      const {data}=sb.storage.from(PORTFOLIO_BUCKET).getPublicUrl(path);
       if(data?.publicUrl) urls.push(data.publicUrl);
     }
     return urls;
@@ -138,7 +203,18 @@
   }
 
   window.FCAUTH={
-    COMMUNES,getSession,currentUser,currentBusiness,createAccount,login,logout,
-    updateBusiness,getBusiness,googleLogin,requireBusiness,uploadPortfolio,normalizeBusiness
+    COMMUNES,
+    getSession,
+    currentUser,
+    currentBusiness,
+    createAccount,
+    login,
+    logout,
+    updateBusiness,
+    getBusiness,
+    googleLogin,
+    requireBusiness,
+    uploadPortfolio,
+    normalizeBusiness
   };
 })();
