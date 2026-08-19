@@ -1,4 +1,4 @@
-FILA CERO v0.8 — MAPAS + PERFILES + RESERVA ENRIQUECIDA
+FILA CERO v0.9 — MAPAS + PERFILES + RESERVA ENRIQUECIDA
 =========================================================
 
 NOVEDADES
@@ -41,7 +41,7 @@ SUBIR A GITHUB
 3. Ejecuta:
 
    git add .
-   git commit -m "Fila Cero v0.8 mapas y perfiles"
+   git commit -m "Fila Cero v0.9 mapas y perfiles"
    git push
 
 Cloudflare debería desplegar después la misma URL:

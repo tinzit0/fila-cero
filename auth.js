@@ -108,11 +108,13 @@
   async function updateBusiness(patch){
     const user=await currentUser();
     if(!user) throw new Error('Debes iniciar sesión.');
-    const clean={...patch};
-    delete clean.id;
-    delete clean.owner_id;
-    delete clean.created_at;
-    delete clean.updated_at;
+    // Solo enviamos columnas que realmente existen en fila_cero_businesses.
+    // Esto evita que campos de presentación como `provider` rompan el guardado.
+    const allowed=new Set([
+      'name','category','description','city','sector','address','whatsapp','instagram',
+      'website','portfolio_urls','latitude','longitude','is_active'
+    ]);
+    const clean=Object.fromEntries(Object.entries(patch||{}).filter(([key])=>allowed.has(key)));
 
     const {data,error}=await sb
       .from(T_BUSINESSES)
@@ -156,7 +158,7 @@
     const redirectTo=new URL('profesional.html',getAppBaseUrl()).href;
     const {data,error}=await sb.auth.signInWithOAuth({
       provider:'google',
-      options:{redirectTo}
+      options:{redirectTo,queryParams:{prompt:'select_account'}}
     });
     if(error) throw error;
     return data;
@@ -176,7 +178,7 @@
     const user=await currentUser();
     if(!user) throw new Error('Debes iniciar sesión para subir imágenes.');
 
-    const selected=Array.from(files||[]).slice(0,3);
+    const selected=Array.from(files||[]).slice(0,12);
     const urls=[];
     for(let i=0;i<selected.length;i++){
       const file=selected[i];

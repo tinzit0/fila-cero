@@ -27,7 +27,7 @@
       <label>Crear contraseña<input id="registerPassword" type="password" minlength="6" required autocomplete="new-password" placeholder="Mínimo 6 caracteres"></label>
       <button class="btn btn-accent btn-full" type="submit">Crear cuenta <span>→</span></button>
     </form>
-    <p class="auth-note">Conectado a Supabase Auth. Si tu proyecto exige confirmación de correo, Supabase enviará un email antes de permitir el primer inicio de sesión.</p>
+    <p class="auth-note">Conectado a Supabase Auth. Puedes ingresar con Google o con correo. El acceso por Google requiere que el proveedor Google esté habilitado en Supabase.</p>
     <div id="authMessage" class="auth-message hidden" aria-live="polite"></div>
   </section>
 </main>
@@ -36,7 +36,7 @@
 <script>
   const tabs=document.querySelectorAll('.auth-tab'),loginForm=document.getElementById('loginForm'),registerForm=document.getElementById('registerForm'),msg=document.getElementById('authMessage');
   const show=m=>{msg.textContent=m;msg.classList.remove('hidden')};
-  const friendly=e=>{const m=String(e?.message||e||'Error');if(m.includes('Invalid login credentials'))return 'Correo o contraseña incorrectos.';if(m.includes('User already registered'))return 'Ya existe una cuenta con ese correo.';return m};
+  const friendly=e=>{const m=String(e?.message||e||'Error');if(m.includes('Invalid login credentials'))return 'Correo o contraseña incorrectos.';if(m.includes('User already registered'))return 'Ya existe una cuenta con ese correo.';if(m.toLowerCase().includes('email rate limit exceeded'))return 'No pudimos enviar otro correo de confirmación por ahora. Puedes esperar un momento o continuar con Google.';if(m.toLowerCase().includes('unsupported provider')||m.toLowerCase().includes('provider is not enabled'))return 'Google todavía no está activado en Supabase. Activa Authentication → Sign In / Providers → Google.';return m};
   tabs.forEach(btn=>btn.addEventListener('click',()=>{tabs.forEach(x=>x.classList.remove('active'));btn.classList.add('active');const reg=btn.dataset.tab==='register';loginForm.classList.toggle('hidden',reg);registerForm.classList.toggle('hidden',!reg);msg.classList.add('hidden')}));
   loginForm.addEventListener('submit',async e=>{e.preventDefault();const b=e.submitter||e.currentTarget.querySelector('button[type=submit]');b.disabled=true;b.textContent='Ingresando…';try{await FCAUTH.login(loginEmail.value,loginPassword.value);location.href='profesional.html'}catch(err){show(friendly(err))}finally{b.disabled=false;b.innerHTML='Entrar al dashboard <span>→</span>'}});
   registerForm.addEventListener('submit',async e=>{e.preventDefault();const b=e.submitter||e.currentTarget.querySelector('button[type=submit]');b.disabled=true;b.textContent='Creando cuenta…';try{const result=await FCAUTH.createAccount({businessName:registerBusiness.value,email:registerEmail.value,password:registerPassword.value});if(result.needsEmailConfirmation){show('Cuenta creada. Revisa tu correo y confirma la cuenta antes de iniciar sesión.');tabs[0].click()}else{location.href='profesional.html'}}catch(err){show(friendly(err))}finally{b.disabled=false;b.innerHTML='Crear cuenta <span>→</span>'}});

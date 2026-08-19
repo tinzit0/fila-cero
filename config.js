@@ -1,5 +1,5 @@
 /*
-  FILA CERO — v0.8 / Supabase compartido
+  FILA CERO — v0.9 / Supabase compartido
 
   Este proyecto usa tablas y recursos EXCLUSIVOS de Fila Cero.
   No uses aquí service_role ni secret keys.
@@ -18,6 +18,8 @@ window.FC_CONFIG = {
     slotsTable: "fila_cero_slots",
     reservationsTable: "fila_cero_reservations",
     bookingRpc: "fila_cero_book_slot",
+    cancelReservationRpc: "fila_cero_cancel_reservation",
+    deleteReservationRpc: "fila_cero_delete_reservation",
     portfolioBucket: "fila-cero-portfolio"
   }
 };
