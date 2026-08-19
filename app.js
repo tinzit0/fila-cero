@@ -20,35 +20,62 @@ const safeDigits=value=>String(value||'').replace(/\D/g,'');
 const fullLocation=s=>`${s.address||''}${s.sector?`, ${s.sector}`:''}, ${s.city||'Concepción'}, Región del Biobío, Chile`;
 const buildMapsSearchUrl=s=>`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullLocation(s))}`;
 const businessLink=s=>s.businessId?`empresa.html?id=${encodeURIComponent(s.businessId)}`:'#';
+const MAP_CFG=window.FC_CONFIG?.maps||{};
+const geocodeCache=new Map();
+let lastGeocodeRequest=0;
 
 function showToast(message){const t=document.getElementById('toast');if(!t)return;t.textContent=message;t.classList.remove('hidden');clearTimeout(showToast.timer);showToast.timer=setTimeout(()=>t.classList.add('hidden'),3600)}
-function mapFallbackHtml(s){return `<div class="map-fallback"><div class="map-pin">⌖</div><h3>${escapeHtml(s.provider||s.name)}</h3><p>${escapeHtml(fullLocation(s))}</p><a class="btn btn-dark" href="${buildMapsSearchUrl(s)}" target="_blank" rel="noopener">Abrir en Google Maps <span>↗</span></a><p><small>Agrega tu API key de Google Maps en <b>config.js</b> para incrustar el mapa.</small></p></div>`}
-function renderGoogleMap(container,s){if(!container||!s)return;const key=googleMapsKey();if(!key){container.innerHTML=mapFallbackHtml(s);return}const params=new URLSearchParams({key,q:fullLocation(s),zoom:'16'});container.innerHTML=`<iframe title="Mapa de ${escapeHtml(s.provider||s.name)}" loading="lazy" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" src="https://www.google.com/maps/embed/v1/place?${params}"></iframe>`}
-function normalizeSlot(row,business=null){const b=business||row.business||null;return {id:row.id,businessId:row.business_id,provider:b?.name||'Centro profesional',service:row.service,category:row.category,city:row.city,sector:row.sector||'',date:row.slot_date,time:String(row.start_time||'').slice(0,5),normalPrice:Number(row.normal_price||0),price:Number(row.fila_price||0),duration:Number(row.duration_minutes||30),address:row.address,status:row.status,createdAt:row.created_at,business:b||null}}
-function humanError(err){const msg=String(err?.message||err||'Error inesperado');if(msg.includes('SLOT_UNAVAILABLE')||msg.includes('duplicate key value'))return 'Ese cupo acaba de ser reservado por otra persona.';if(msg.includes('Invalid login credentials'))return 'Correo o contraseña incorrectos.';return msg}
+function mapFallbackHtml(s){return `<div class="map-fallback"><div class="map-pin">⌖</div><h3>${escapeHtml(s.provider||s.name)}</h3><p>${escapeHtml(fullLocation(s))}</p><a class="btn btn-dark" href="${buildMapsSearchUrl(s)}" target="_blank" rel="noopener">Abrir en Google Maps <span>↗</span></a><p><small>No pudimos ubicar automáticamente esta dirección. Puedes abrirla directamente en Google Maps.</small></p></div>`}
+function osmEmbedUrl(lat,lon){const y=Number(lat),x=Number(lon),dx=.009,dy=.0055;const bbox=[x-dx,y-dy,x+dx,y+dy].join(',');return `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(bbox)}&layer=mapnik&marker=${encodeURIComponent(`${y},${x}`)}`}
+async function geocodeLocation(s){
+  const lat=Number(s?.latitude),lon=Number(s?.longitude);
+  if(Number.isFinite(lat)&&Number.isFinite(lon)&&Math.abs(lat)>0&&Math.abs(lon)>0)return {lat,lon,source:'stored'};
+  const query=fullLocation(s).trim();if(!query)return null;
+  if(geocodeCache.has(query))return geocodeCache.get(query);
+  try{const cached=JSON.parse(localStorage.getItem('fc_geocode_cache')||'{}');if(cached[query]){geocodeCache.set(query,cached[query]);return cached[query]}}catch{}
+  const wait=Math.max(0,1100-(Date.now()-lastGeocodeRequest));if(wait)await new Promise(r=>setTimeout(r,wait));lastGeocodeRequest=Date.now();
+  try{
+    const endpoint=String(MAP_CFG.geocoderUrl||'https://nominatim.openstreetmap.org/search');
+    const params=new URLSearchParams({format:'jsonv2',limit:'1',countrycodes:'cl',q:query});
+    const res=await fetch(`${endpoint}?${params}`,{headers:{Accept:'application/json'}});
+    if(!res.ok)throw new Error(`Geocoding ${res.status}`);
+    const data=await res.json();const first=Array.isArray(data)?data[0]:null;if(!first)return null;
+    const result={lat:Number(first.lat),lon:Number(first.lon),source:'nominatim'};if(!Number.isFinite(result.lat)||!Number.isFinite(result.lon))return null;
+    geocodeCache.set(query,result);
+    try{const cached=JSON.parse(localStorage.getItem('fc_geocode_cache')||'{}');cached[query]=result;localStorage.setItem('fc_geocode_cache',JSON.stringify(cached))}catch{}
+    return result;
+  }catch(err){console.warn('Fila Cero: no se pudo geocodificar la dirección.',err);return null}
+}
+async function renderLocationMap(container,s){
+  if(!container||!s)return;container.innerHTML='<div class="map-loading"><span></span><strong>Ubicando centro…</strong></div>';
+  const key=googleMapsKey();
+  if(key){const params=new URLSearchParams({key,q:fullLocation(s),zoom:'16'});container.innerHTML=`<iframe title="Mapa de ${escapeHtml(s.provider||s.name)}" loading="lazy" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" src="https://www.google.com/maps/embed/v1/place?${params}"></iframe>`;return}
+  const coords=await geocodeLocation(s);
+  if(coords){container.innerHTML=`<iframe title="Mapa de ${escapeHtml(s.provider||s.name)}" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" src="${osmEmbedUrl(coords.lat,coords.lon)}"></iframe><div class="map-provider-note">Mapa: OpenStreetMap · <a href="${buildMapsSearchUrl(s)}" target="_blank" rel="noopener">Abrir en Google Maps ↗</a></div>`;return}
+  container.innerHTML=mapFallbackHtml(s);
+}
+function normalizeSlot(row,business=null){const b=business||row.business||null;return {id:row.id,businessId:row.business_id,provider:b?.name||'Centro profesional',service:row.service,category:row.category,city:row.city,sector:row.sector||'',date:row.slot_date,time:String(row.start_time||'').slice(0,5),normalPrice:Number(row.normal_price||0),price:Number(row.fila_price||0),duration:Number(row.duration_minutes||30),address:row.address,status:row.status,createdAt:row.created_at,latitude:Number(b?.latitude)||null,longitude:Number(b?.longitude)||null,business:b||null}}
+function humanError(err){const msg=String(err?.message||err||'Error inesperado');if(msg.includes('SLOT_UNAVAILABLE')||msg.includes('duplicate key value'))return 'Ese cupo acaba de ser reservado por otra persona.';if(msg.includes('Invalid login credentials'))return 'Correo o contraseña incorrectos.';if(msg.includes('email rate limit exceeded'))return 'No pudimos enviar el correo de confirmación en este momento. Intenta más tarde o continúa con Google.';return msg}
 
 async function initTopbar(){const link=document.querySelector('[data-account-link]');if(!link||!window.FCAUTH)return;try{const session=await FCAUTH.getSession();link.href=session?'profesional.html':'login.html';link.textContent=session?'Mi empresa':'Crear cuenta / Iniciar sesión'}catch{link.href='login.html'}}
 
 async function initMarketplace(){
   const grid=document.getElementById('slotsGrid');if(!grid||!sb)return;
-  const serviceFilter=document.getElementById('serviceFilter'),cityFilter=document.getElementById('cityFilter'),timeFilter=document.getElementById('timeFilter'),sortSelect=document.getElementById('sortSelect'),resultsText=document.getElementById('resultsText'),empty=document.getElementById('emptyState'),modal=document.getElementById('bookingModal'),mapModal=document.getElementById('mapModal');
-  let slots=[],selectedSlot=null,loading=false;
+  const serviceFilter=document.getElementById('serviceFilter'),cityFilter=document.getElementById('cityFilter'),timeFilter=document.getElementById('timeFilter'),sortSelect=document.getElementById('sortSelect'),resultsText=document.getElementById('resultsText'),empty=document.getElementById('emptyState'),modal=document.getElementById('bookingModal'),mapModal=document.getElementById('mapModal'),businessesGrid=document.getElementById('businessesGrid'),businessesEmpty=document.getElementById('businessesEmpty');
+  let slots=[],allBusinesses=[],selectedSlot=null,loading=false;
 
   async function loadSlots(){
     if(loading)return;loading=true;
-    const {data,error}=await sb.from(T_SLOTS).select('id,business_id,service,category,city,sector,address,slot_date,start_time,duration_minutes,normal_price,fila_price,status,created_at').eq('status','active').gte('slot_date',TODAY_STR).order('slot_date',{ascending:true}).order('start_time',{ascending:true});
-    if(error){loading=false;console.error(error);resultsText.textContent='No pudimos cargar los cupos. Revisa que hayas ejecutado el SQL v0.7 de Fila Cero.';return}
-    const rows=data||[];
-    const businessIds=[...new Set(rows.map(r=>r.business_id).filter(Boolean))];
-    const businessMap=new Map();
-    if(businessIds.length){
-      const bizReq=await sb.from(T_BUSINESSES).select('id,name,category,description,whatsapp,instagram,website,portfolio_urls,is_active').in('id',businessIds);
-      if(bizReq.error){loading=false;console.error(bizReq.error);resultsText.textContent='No pudimos cargar los centros profesionales.';return}
-      (bizReq.data||[]).forEach(b=>businessMap.set(b.id,b));
-    }
+    const slotPromise=sb.from(T_SLOTS).select('id,business_id,service,category,city,sector,address,slot_date,start_time,duration_minutes,normal_price,fila_price,status,created_at').eq('status','active').gte('slot_date',TODAY_STR).order('slot_date',{ascending:true}).order('start_time',{ascending:true});
+    const businessPromise=sb.from(T_BUSINESSES).select('id,name,category,description,city,sector,address,whatsapp,instagram,website,portfolio_urls,latitude,longitude,is_active,created_at').eq('is_active',true).order('created_at',{ascending:false}).limit(100);
+    const [slotReq,bizReq]=await Promise.all([slotPromise,businessPromise]);
+    if(slotReq.error){loading=false;console.error(slotReq.error);resultsText.textContent='No pudimos cargar los cupos. Revisa la conexión con Supabase.';return}
+    if(bizReq.error){loading=false;console.error(bizReq.error);resultsText.textContent='No pudimos cargar los perfiles profesionales.';return}
+    const rows=slotReq.data||[];allBusinesses=(bizReq.data||[]).filter(b=>SUPPORTED_COMMUNES.includes(b.city));
+    const businessMap=new Map(allBusinesses.map(b=>[b.id,b]));
     loading=false;
     slots=rows.map(r=>normalizeSlot(r,businessMap.get(r.business_id)||null)).filter(s=>s.business&&SUPPORTED_COMMUNES.includes(s.city)&&!isExpired(s));
-    render();renderReservations();
+    render();renderReservations();renderBusinessDirectory();
   }
 
   function filteredSlots(){
@@ -65,6 +92,19 @@ async function initMarketplace(){
     return items;
   }
 
+  function renderBusinessDirectory(){
+    if(!businessesGrid)return;
+    businessesEmpty?.classList.toggle('hidden',allBusinesses.length>0);
+    const activeCounts=new Map();slots.forEach(s=>activeCounts.set(s.businessId,(activeCounts.get(s.businessId)||0)+1));
+    businessesGrid.innerHTML=allBusinesses.map(b=>{
+      const portfolio=Array.isArray(b.portfolio_urls)?b.portfolio_urls.map(safeHttpUrl).filter(Boolean):[];
+      const initial=(b.name||'FC').split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase();
+      const image=portfolio[0]?`<img src="${escapeHtml(portfolio[0])}" alt="${escapeHtml(b.name)}" loading="lazy">`:`<span>${escapeHtml(initial)}</span>`;
+      const count=activeCounts.get(b.id)||0;const wa=safeDigits(b.whatsapp);
+      return `<article class="business-directory-card"><a class="business-directory-cover" href="empresa.html?id=${encodeURIComponent(b.id)}">${image}<span class="business-directory-category">${escapeHtml(b.category||'Profesional')}</span></a><div class="business-directory-body"><div><h3>${escapeHtml(b.name)}</h3><p class="business-directory-location">⌖ ${escapeHtml(b.sector?b.sector+' · ':'')}${escapeHtml(b.city||'Gran Concepción')}</p></div><p class="business-directory-description">${escapeHtml((b.description||'Perfil profesional en Fila Cero.').slice(0,150))}</p><div class="business-directory-meta"><span><strong>${count}</strong> ${count===1?'cupo activo':'cupos activos'}</span>${wa?`<a href="https://wa.me/${wa}" target="_blank" rel="noopener">WhatsApp ↗</a>`:''}</div><a class="btn btn-dark btn-full" href="empresa.html?id=${encodeURIComponent(b.id)}">Ver perfil y disponibilidad <span>→</span></a></div></article>`
+    }).join('');
+  }
+
   function renderLatestSlot(){const box=document.getElementById('latestSlotCard');if(!box)return;const items=slots.slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)),s=items[0];const count=document.getElementById('heroActiveCount');if(count)count.textContent=slots.length;if(!s){box.innerHTML='<p class="provider">No hay cupos activos en este momento.</p>';return}box.innerHTML=`<div class="category-line">${escapeHtml(s.category)} · ${escapeHtml(s.city)}</div><h3>${escapeHtml(s.service)}</h3><p class="provider">${escapeHtml(s.provider)}</p><div class="slot-time-big">${formatDate(s.date)} · ${escapeHtml(s.time)}</div><div class="showcase-bottom"><div><div class="price">${money(s.price)}</div><small>${escapeHtml(s.address)}</small></div><a class="map-link latest-map-link" href="#">Ver ubicación ↗</a></div>`;box.querySelector('.latest-map-link')?.addEventListener('click',e=>{e.preventDefault();openMap(s.id)})}
 
   function render(){
@@ -77,8 +117,16 @@ async function initMarketplace(){
     renderLatestSlot();
   }
 
-  function openBooking(id){selectedSlot=slots.find(s=>s.id===id);if(!selectedSlot)return showToast('Ese cupo ya no está disponible.');document.getElementById('bookingSummary').innerHTML=`<strong>${escapeHtml(selectedSlot.service)}</strong><div><a class="provider-link" href="${businessLink(selectedSlot)}">${escapeHtml(selectedSlot.provider)} ↗</a></div><div>${formatDate(selectedSlot.date)} · ${escapeHtml(selectedSlot.time)} · ${Number(selectedSlot.duration)} min</div><div class="summary-address">⌖ ${escapeHtml(fullLocation(selectedSlot))}</div><div style="margin-top:9px;font-weight:950;font-size:22px">${money(selectedSlot.price)}</div>`;renderGoogleMap(document.getElementById('bookingMap'),selectedSlot);modal.classList.remove('hidden')}
-  function openMap(id){const s=slots.find(x=>x.id===id);if(!s)return;document.getElementById('mapTitle').textContent=s.provider;document.getElementById('mapModalMeta').innerHTML=`${escapeHtml(s.service)} · ${escapeHtml(fullLocation(s))} · <a href="${buildMapsSearchUrl(s)}" target="_blank" rel="noopener"><strong>Abrir navegación ↗</strong></a>`;renderGoogleMap(document.getElementById('mapModalContent'),s);mapModal.classList.remove('hidden')}
+  function openBooking(id){
+    selectedSlot=slots.find(s=>s.id===id);if(!selectedSlot)return showToast('Ese cupo ya no está disponible.');
+    const b=selectedSlot.business||{};const savings=selectedSlot.normalPrice>0?Math.max(0,Math.round((1-selectedSlot.price/selectedSlot.normalPrice)*100)):0;
+    document.getElementById('bookingSummary').innerHTML=`<span class="booking-category">${escapeHtml(selectedSlot.category)} · ${escapeHtml(selectedSlot.city)}</span><strong>${escapeHtml(selectedSlot.service)}</strong><div class="booking-date-line">${formatDate(selectedSlot.date)} · <b>${escapeHtml(selectedSlot.time)}</b> · ${Number(selectedSlot.duration)} min</div><div class="summary-address">⌖ ${escapeHtml(fullLocation(selectedSlot))}</div><div class="booking-price-row"><div><span>${selectedSlot.normalPrice>selectedSlot.price?money(selectedSlot.normalPrice):''}</span><strong>${money(selectedSlot.price)}</strong></div>${savings?`<b>${savings}% ahorro</b>`:''}</div>`;
+    const wa=safeDigits(b.whatsapp),ig=String(b.instagram||'').replace(/[^a-zA-Z0-9._]/g,''),web=safeHttpUrl(b.website),portfolio=(Array.isArray(b.portfolio_urls)?b.portfolio_urls:[]).map(safeHttpUrl).filter(Boolean);
+    const links=[];if(wa)links.push(`<a href="https://wa.me/${wa}" target="_blank" rel="noopener">WhatsApp ↗</a>`);if(ig)links.push(`<a href="https://instagram.com/${encodeURIComponent(ig)}" target="_blank" rel="noopener">Instagram ↗</a>`);if(web)links.push(`<a href="${escapeHtml(web)}" target="_blank" rel="noopener">Sitio web ↗</a>`);
+    document.getElementById('bookingBusinessInfo').innerHTML=`<div class="booking-business-head"><div class="booking-business-avatar">${escapeHtml((b.name||'FC').split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase())}</div><div><span>TE ATIENDE</span><a href="${businessLink(selectedSlot)}">${escapeHtml(selectedSlot.provider)} ↗</a><small>${escapeHtml(b.category||selectedSlot.category)} · ${escapeHtml(b.sector?b.sector+' · ':'')}${escapeHtml(b.city||selectedSlot.city)}</small></div></div>${b.description?`<p>${escapeHtml(b.description)}</p>`:''}${portfolio.length?`<div class="booking-mini-portfolio">${portfolio.slice(0,3).map((url,i)=>`<img src="${escapeHtml(url)}" alt="${escapeHtml(selectedSlot.provider)} ${i+1}" loading="lazy">`).join('')}</div>`:''}${links.length?`<div class="booking-business-links">${links.join('')}</div>`:''}`;
+    renderLocationMap(document.getElementById('bookingMap'),selectedSlot);modal.classList.remove('hidden')
+  }
+  function openMap(id){const s=slots.find(x=>x.id===id);if(!s)return;document.getElementById('mapTitle').textContent=s.provider;document.getElementById('mapModalMeta').innerHTML=`${escapeHtml(s.service)} · ${escapeHtml(fullLocation(s))} · <a href="${buildMapsSearchUrl(s)}" target="_blank" rel="noopener"><strong>Abrir navegación ↗</strong></a>`;renderLocationMap(document.getElementById('mapModalContent'),s);mapModal.classList.remove('hidden')}
 
   document.getElementById('closeModal').addEventListener('click',()=>modal.classList.add('hidden'));modal.addEventListener('click',e=>{if(e.target===modal)modal.classList.add('hidden')});
   document.getElementById('closeMapModal').addEventListener('click',()=>mapModal.classList.add('hidden'));mapModal.addEventListener('click',e=>{if(e.target===mapModal)mapModal.classList.add('hidden')});
@@ -100,7 +148,7 @@ async function initMarketplace(){
 
   function renderReservations(){const box=document.getElementById('reservationsList');if(!box)return;let rs=[];try{rs=JSON.parse(localStorage.getItem('fc_my_reservations')||'[]')}catch{}if(!rs.length){box.innerHTML='<div class="empty"><div class="empty-icon">◇</div><h3>Aún no tienes reservas</h3><p>Cuando tomes un cupo aparecerá aquí.</p></div>';return}box.innerHTML=rs.slice().reverse().map(r=>{const s=r.slot;return s?`<article class="reservation-item"><div><h3>${escapeHtml(s.service)} · ${escapeHtml(s.provider)}</h3><p>${formatDate(s.date)} · ${escapeHtml(s.time)} · ${escapeHtml(s.city)} · ${money(s.price)}</p></div><span class="reservation-status">CONFIRMADA</span></article>`:''}).join('')}
 
-  const channel=sb.channel('fila-cero-marketplace').on('postgres_changes',{event:'*',schema:'public',table:T_SLOTS},()=>loadSlots()).on('postgres_changes',{event:'UPDATE',schema:'public',table:T_BUSINESSES},()=>loadSlots()).subscribe();
+  const channel=sb.channel('fila-cero-marketplace').on('postgres_changes',{event:'*',schema:'public',table:T_SLOTS},()=>loadSlots()).on('postgres_changes',{event:'*',schema:'public',table:T_BUSINESSES},()=>loadSlots()).subscribe();
   window.addEventListener('beforeunload',()=>{try{sb.removeChannel(channel)}catch{}});
   await loadSlots();
   const q=new URLSearchParams(location.search).get('book');if(q)setTimeout(()=>openBooking(q),150);
@@ -117,7 +165,10 @@ async function initProfessional(){
 
   function mapOwnedSlot(row){return normalizeSlot(row,business)}
   function profileScore(b){const fields=['name','category','city','address','description','whatsapp'];return Math.round(fields.filter(k=>String(b[k]||'').trim()).length/fields.length*100)}
-  function loadProfile(){profileName.value=business.name||'';profileCategory.value=business.category||'Otro';profileDescription.value=business.description||'';profileCity.value=business.city||'Concepción';profileSector.value=business.sector||'';profileAddress.value=business.address||'';profileWhatsapp.value=business.whatsapp||'';profileInstagram.value=business.instagram||'';profileWebsite.value=business.website||'';const p=business.portfolio||[];portfolio1.value=p[0]||'';portfolio2.value=p[1]||'';portfolio3.value=p[2]||'';profileCompletion.textContent=`${profileScore(business)}%`;businessHeroName.textContent=business.name}
+  function loadProfile(){
+    profileName.value=business.name||'';profileCategory.value=business.category||'Otro';profileDescription.value=business.description||'';profileCity.value=business.city||'Concepción';profileSector.value=business.sector||'';profileAddress.value=business.address||'';profileWhatsapp.value=business.whatsapp||'';profileInstagram.value=business.instagram||'';profileWebsite.value=business.website||'';const p=business.portfolio||[];portfolio1.value=p[0]||'';portfolio2.value=p[1]||'';portfolio3.value=p[2]||'';profileCompletion.textContent=`${profileScore(business)}%`;businessHeroName.textContent=business.name;
+    const card=document.getElementById('dashboardProfileCard');if(card){dashboardProfileAvatar.textContent=(business.name||'FC').split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase();dashboardProfileName.textContent=business.name||'Mi empresa';dashboardProfileMeta.textContent=`${business.category||'Profesional'} · ${business.sector?business.sector+' · ':''}${business.city||'Gran Concepción'} · ${business.address||'Dirección por completar'}`;const links=[];const wa=safeDigits(business.whatsapp);if(wa)links.push(`<a href="https://wa.me/${wa}" target="_blank" rel="noopener">WhatsApp ↗</a>`);const ig=String(business.instagram||'').replace(/[^a-zA-Z0-9._]/g,'');if(ig)links.push(`<a href="https://instagram.com/${encodeURIComponent(ig)}" target="_blank" rel="noopener">Instagram ↗</a>`);links.push(`<a href="empresa.html?id=${encodeURIComponent(business.id)}">Ver perfil público ↗</a>`);dashboardProfileLinks.innerHTML=links.join('');renderLocationMap(dashboardProfileMap,{...business,provider:business.name})}
+  }
 
   async function loadDashboard(){
     const slotReq=await sb.from(T_SLOTS).select('*').eq('business_id',business.id).order('created_at',{ascending:false});
@@ -130,7 +181,10 @@ async function initProfessional(){
   }
 
   function renderLivePreview(){const box=professionalLivePreview,s=slots.filter(s=>s.status==='active'&&!isExpired(s)).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))[0];if(!s){box.innerHTML='<div class="preview-empty">Publica tu primer cupo para verlo aquí.</div>';return}box.innerHTML=`<article class="preview-card"><div class="preview-top"><div class="service-icon">${ICONS[s.category]||'⚡'}</div><span class="badge-live">● DISPONIBLE</span></div><h3>${escapeHtml(s.service)}</h3><p>${escapeHtml(s.provider)}</p><div class="preview-time">${formatDate(s.date)} · ${escapeHtml(s.time)}</div><p>⌖ ${escapeHtml(s.address)}, ${escapeHtml(s.city)}</p><div class="preview-bottom"><div><div class="price-old">${money(s.normalPrice)}</div><div class="preview-price">${money(s.price)}</div></div><span class="reservation-status">EN VIVO</span></div></article>`}
-  function renderReservationsForBusiness(){const box=businessReservations;if(!reservations.length){box.innerHTML='<div class="dashboard-empty"><strong>Aún no hay horas reservadas.</strong><span>Cuando una persona tome uno de tus cupos, aparecerá aquí con sus datos de contacto.</span></div>';return}box.innerHTML=reservations.map(r=>{const s=slots.find(x=>x.id===r.slot_id);return `<article class="booking-row"><div class="booking-client"><span class="client-avatar">${escapeHtml((r.client_name||'?')[0])}</span><div><strong>${escapeHtml(r.client_name)}</strong><small>${escapeHtml(r.client_email)} · ${escapeHtml(r.client_phone)}</small></div></div><div><strong>${escapeHtml(s?.service||'Cupo reservado')}</strong><small>${s?.date?formatDate(s.date):''} · ${escapeHtml(String(s?.time||''))}</small></div><div><span class="reservation-status">${escapeHtml(String(r.status||'confirmed').toUpperCase())}</span></div></article>`}).join('')}
+  function renderReservationsForBusiness(){
+    const box=businessReservations;if(!reservations.length){box.innerHTML='<div class="dashboard-empty"><strong>Aún no hay horas reservadas.</strong><span>Cuando una persona tome uno de tus cupos, aparecerá aquí con sus datos de contacto.</span></div>';return}
+    box.innerHTML=reservations.map(r=>{const s=slots.find(x=>x.id===r.slot_id);const phone=safeDigits(r.client_phone);const created=r.created_at?new Intl.DateTimeFormat('es-CL',{dateStyle:'medium',timeStyle:'short'}).format(new Date(r.created_at)):'';return `<article class="booking-row booking-row-rich"><div class="booking-client"><span class="client-avatar">${escapeHtml((r.client_name||'?')[0])}</span><div><strong>${escapeHtml(r.client_name)}</strong><small>${escapeHtml(r.client_email)}</small><small>${escapeHtml(r.client_phone)}</small><div class="booking-client-actions">${phone?`<a href="https://wa.me/${phone}" target="_blank" rel="noopener">WhatsApp ↗</a>`:''}<a href="mailto:${encodeURIComponent(r.client_email||'')}">Correo ↗</a></div></div></div><div class="booking-service-detail"><span class="eyebrow">CITA RESERVADA</span><strong>${escapeHtml(s?.service||'Cupo reservado')}</strong><small>${s?.date?formatDate(s.date):''} · ${escapeHtml(String(s?.time||''))} · ${Number(s?.duration||0)} min</small><small>⌖ ${escapeHtml(s?fullLocation(s):business.address||'')}</small><small>${created?`Reservada: ${escapeHtml(created)}`:''}</small></div><div class="booking-row-side"><strong>${s?money(s.price):''}</strong><span class="reservation-status">${escapeHtml(String(r.status||'confirmed').toUpperCase())}</span></div></article>`}).join('')
+  }
   function renderPro(){const active=slots.filter(s=>s.status==='active'&&!isExpired(s)),booked=slots.filter(s=>s.status==='reserved');activeSlotsCount.textContent=active.length;bookedSlotsCount.textContent=reservations.filter(r=>r.status==='confirmed').length;if(!slots.length)professionalSlots.innerHTML='<p class="muted-small">Todavía no has publicado cupos.</p>';else professionalSlots.innerHTML=slots.map(s=>`<div class="pro-slot"><strong>${escapeHtml(s.service)}</strong><small>${formatDate(s.date)} · ${escapeHtml(s.time)} · ${escapeHtml(s.city)}<br>${money(s.price)}</small><div class="pro-slot-actions"><span class="reservation-status">${s.status==='reserved'?'RESERVADO':s.status==='cancelled'?'CANCELADO':isExpired(s)?'VENCIDO':'ACTIVO'}</span>${s.status==='active'?`<button class="delete-btn" data-id="${escapeHtml(s.id)}">Cancelar cupo</button>`:''}</div></div>`).join('');professionalSlots.querySelectorAll('.delete-btn').forEach(btn=>btn.addEventListener('click',async()=>{const {error}=await sb.from(T_SLOTS).update({status:'cancelled'}).eq('id',btn.dataset.id).eq('business_id',business.id);if(error)return showToast(humanError(error));showToast('Cupo cancelado.');await loadDashboard()}));renderLivePreview();renderReservationsForBusiness()}
 
   form.addEventListener('submit',async e=>{
@@ -148,7 +202,9 @@ async function initProfessional(){
       let portfolio=[portfolio1.value.trim(),portfolio2.value.trim(),portfolio3.value.trim()].map(safeHttpUrl).filter(Boolean);
       const fileInput=document.getElementById('portfolioFiles');
       if(fileInput?.files?.length){portfolio=await FCAUTH.uploadPortfolio(fileInput.files)}
-      business=await FCAUTH.updateBusiness({name:profileName.value.trim(),category:profileCategory.value,description:profileDescription.value.trim(),city:profileCity.value,sector:profileSector.value.trim(),address:profileAddress.value.trim(),whatsapp:safeDigits(profileWhatsapp.value),instagram:profileInstagram.value.replace(/^@/,'').trim(),website:safeHttpUrl(profileWebsite.value),portfolio_urls:portfolio.slice(0,3)});
+      const profileDraft={name:profileName.value.trim(),provider:profileName.value.trim(),category:profileCategory.value,description:profileDescription.value.trim(),city:profileCity.value,sector:profileSector.value.trim(),address:profileAddress.value.trim(),whatsapp:safeDigits(profileWhatsapp.value),instagram:profileInstagram.value.replace(/^@/,'').trim(),website:safeHttpUrl(profileWebsite.value),portfolio_urls:portfolio.slice(0,3)};
+      const oldLocation=fullLocation(business),newLocation=fullLocation(profileDraft);const coords=await geocodeLocation(profileDraft);
+      business=await FCAUTH.updateBusiness({...profileDraft,latitude:coords?.lat??(oldLocation===newLocation?business.latitude:null),longitude:coords?.lon??(oldLocation===newLocation?business.longitude:null)});
       await sb.from(T_SLOTS).update({city:business.city,sector:business.sector||'',address:business.address}).eq('business_id',business.id).eq('status','active');
       publicProfileLink.href=`empresa.html?id=${encodeURIComponent(business.id)}`;profilePreviewButton.href=publicProfileLink.href;loadProfile();showToast('Perfil público guardado en Supabase.');await loadDashboard()
     }catch(err){showToast(humanError(err))}finally{button.disabled=false;button.innerHTML='Guardar perfil público <span>→</span>'}
@@ -169,7 +225,7 @@ async function initBusinessProfile(){
   function renderBusiness(){businessName.textContent=business.name;businessCategoryBadge.textContent=(business.category||'CENTRO PROFESIONAL').toUpperCase();businessLocation.textContent=`${business.sector?business.sector+' · ':''}${business.city}`;businessDescription.textContent=business.description||'Este centro todavía no ha agregado una descripción pública.';businessAvatar.textContent=(business.name||'FC').split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase();asideBusinessName.textContent=business.name;asideAddress.textContent=`${business.address||'Dirección por completar'}${business.sector?`, ${business.sector}`:''}, ${business.city}`;
     const contacts=[];const wa=safeDigits(business.whatsapp);if(wa)contacts.push(`<a class="btn btn-whatsapp" href="https://wa.me/${wa}" target="_blank" rel="noopener">WhatsApp <span>↗</span></a>`);const ig=String(business.instagram||'').replace(/[^a-zA-Z0-9._]/g,'');if(ig)contacts.push(`<a class="btn btn-outline" href="https://instagram.com/${encodeURIComponent(ig)}" target="_blank" rel="noopener">Instagram <span>↗</span></a>`);const web=safeHttpUrl(business.website);if(web)contacts.push(`<a class="btn btn-outline" href="${escapeHtml(web)}" target="_blank" rel="noopener">Sitio web <span>↗</span></a>`);businessContacts.innerHTML=contacts.join('')||'<span class="muted-small">Este centro todavía no ha publicado canales de contacto.</span>';
     const portfolio=(business.portfolio||[]).map(safeHttpUrl).filter(Boolean);businessPortfolio.innerHTML=portfolio.length?portfolio.map((url,i)=>`<figure class="portfolio-item"><img src="${escapeHtml(url)}" alt="Portafolio de ${escapeHtml(business.name)} ${i+1}" loading="lazy"><figcaption>Portafolio ${i+1}</figcaption></figure>`).join(''):'<div class="portfolio-placeholder"><span>＋</span><p>Este centro todavía no ha agregado fotografías.</p></div>';
-    renderGoogleMap(businessMap,{...business,provider:business.name})
+    renderLocationMap(businessMap,{...business,provider:business.name})
   }
   async function renderSlots(){try{const slots=await loadPublicSlots();businessSlots.innerHTML=slots.length?slots.map(s=>`<article class="profile-slot"><div><span class="viz-category">${escapeHtml(s.category)}</span><h3>${escapeHtml(s.service)}</h3><p>${formatDate(s.date)} · <strong>${escapeHtml(s.time)}</strong> · ${Number(s.duration)} min</p></div><div class="profile-slot-price"><strong>${money(s.price)}</strong><a class="btn btn-accent btn-small" href="index.html?book=${encodeURIComponent(s.id)}">Reservar</a></div></article>`).join(''):'<div class="dashboard-empty"><strong>Sin cupos disponibles por ahora.</strong><span>Puedes contactar directamente al centro o volver más tarde.</span></div>'}catch(err){businessSlots.innerHTML='<div class="dashboard-empty"><strong>No pudimos cargar los cupos.</strong><span>Intenta nuevamente en unos segundos.</span></div>';console.error(err)}}
   renderBusiness();await renderSlots();

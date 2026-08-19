@@ -16,6 +16,7 @@
     </a>
     <nav>
       <a href="#disponibles">Explorar</a>
+      <a href="#profesionales">Profesionales</a>
       <a href="#mis-reservas">Mis reservas</a>
       <a class="btn btn-dark btn-small" data-account-link href="login.html">Crear cuenta / Iniciar sesión</a>
     </nav>
@@ -135,6 +136,23 @@
       </div>
     </section>
 
+    <section class="section directory-section" id="profesionales">
+      <div class="section-heading premium-heading">
+        <div>
+          <span class="eyebrow">DIRECTORIO PROFESIONAL</span>
+          <h2>Centros y profesionales en Fila Cero</h2>
+          <p>Los perfiles públicos creados en Fila Cero aparecen aquí aunque todavía no tengan un cupo disponible.</p>
+        </div>
+        <a class="btn btn-outline" href="login.html">Crear perfil profesional <span>→</span></a>
+      </div>
+      <div id="businessesGrid" class="businesses-grid"></div>
+      <div id="businessesEmpty" class="empty hidden">
+        <div class="empty-icon">◎</div>
+        <h3>Aún no hay perfiles públicos</h3>
+        <p>Cuando un centro complete su perfil, aparecerá automáticamente en este directorio.</p>
+      </div>
+    </section>
+
     <section class="experience-section">
       <div class="experience-copy">
         <span class="eyebrow light">EXPERIENCIA FILA CERO</span>
@@ -168,6 +186,7 @@
       <div class="booking-layout">
         <div>
           <div id="bookingSummary" class="booking-summary"></div>
+          <div id="bookingBusinessInfo" class="booking-business-info"></div>
           <form id="bookingForm" class="booking-form">
             <label>Nombre completo<input id="clientName" required autocomplete="name" placeholder="Ej: Camila Rojas"></label>
             <label>Correo<input id="clientEmail" required type="email" autocomplete="email" placeholder="nombre@correo.cl"></label>

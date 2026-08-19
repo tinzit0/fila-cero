@@ -35,6 +35,18 @@
 
   <section class="panel dashboard-section" id="perfil">
     <div class="panel-heading split-heading"><div><span class="eyebrow">VITRINA PÚBLICA</span><h2>Perfil de mi empresa</h2><p>Funciona como una mini red social profesional dentro de Fila Cero.</p></div><span class="secure-chip">PORTAFOLIO</span></div>
+    <div id="dashboardProfileCard" class="dashboard-profile-card">
+      <div class="dashboard-profile-identity">
+        <div id="dashboardProfileAvatar" class="business-avatar compact-avatar">FC</div>
+        <div>
+          <span class="eyebrow">MI PERFIL ACTIVO</span>
+          <h3 id="dashboardProfileName">Mi empresa</h3>
+          <p id="dashboardProfileMeta">Completa los datos para publicar tu perfil.</p>
+          <div id="dashboardProfileLinks" class="booking-business-links"></div>
+        </div>
+      </div>
+      <div id="dashboardProfileMap" class="map-shell dashboard-profile-map"></div>
+    </div>
     <form id="businessProfileForm" class="publish-form">
       <div class="form-row"><label>Nombre público<input id="profileName" required></label><label>Rubro principal<select id="profileCategory"><option>Psicología</option><option>Dental</option><option>Kinesiología</option><option>Veterinaria</option><option>Nutrición</option><option>Otro</option></select></label></div>
       <label>Descripción del centro<textarea id="profileDescription" rows="4" placeholder="Cuenta quiénes son, qué atención realizan y qué los diferencia."></textarea></label>
