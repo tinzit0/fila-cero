@@ -8,9 +8,9 @@
 <header class="topbar topbar-dark"><a class="brand brand-light" href="index.html"><span class="brand-mark">0</span><span class="brand-copy"><strong>FILA CERO</strong><small>Empresas y profesionales</small></span></a><nav><a href="index.html">Volver al marketplace</a></nav></header>
 <main class="auth-main">
   <section class="auth-visual">
-    <span class="eyebrow light">FILA CERO BUSINESS</span><h1>Tu agenda vacía<br><em>puede volver a llenarse.</em></h1>
-    <p>Crea el perfil de tu centro, publica cupos liberados y revisa las reservas recibidas desde un solo lugar.</p>
-    <div class="auth-feature-grid"><article><b>01</b><strong>Perfil público</strong><span>WhatsApp, portafolio, servicios y ubicación.</span></article><article><b>02</b><strong>Horas en vivo</strong><span>Publica cancelaciones en segundos.</span></article><article><b>03</b><strong>Reservas</strong><span>Revisa quién tomó cada cupo.</span></article></div>
+    <span class="eyebrow light">FILA CERO</span><h1>Una cuenta.<br><em>Dos formas de usarla.</em></h1>
+    <p>Reserva horas, guarda favoritos y recibe alertas. Si eres profesional, además puedes publicar cupos y administrar tu vitrina.</p>
+    <div class="auth-feature-grid"><article><b>01</b><strong>Personas</strong><span>Historial, favoritos, reseñas y alertas.</span></article><article><b>02</b><strong>Empresas</strong><span>Perfil público, agenda y estadísticas.</span></article><article><b>03</b><strong>Google</strong><span>Acceso rápido con tu cuenta.</span></article></div>
   </section>
   <section class="auth-card">
     <div class="auth-tabs"><button class="auth-tab active" data-tab="login">Iniciar sesión</button><button class="auth-tab" data-tab="register">Crear cuenta</button></div>
@@ -19,10 +19,12 @@
     <form id="loginForm" class="auth-form">
       <label>Correo electrónico<input id="loginEmail" type="email" required autocomplete="email" placeholder="empresa@correo.cl"></label>
       <label>Contraseña<input id="loginPassword" type="password" required autocomplete="current-password" placeholder="••••••••"></label>
-      <button class="btn btn-accent btn-full" type="submit">Entrar al dashboard <span>→</span></button>
+      <button class="btn btn-accent btn-full" type="submit">Iniciar sesión <span>→</span></button>
+      <a class="auth-forgot-link" href="recuperar.html">¿Olvidaste tu contraseña?</a>
     </form>
     <form id="registerForm" class="auth-form hidden">
-      <label>Nombre del centro o profesional<input id="registerBusiness" required placeholder="Ej: Centro Psicología Concepción"></label>
+      <label>Tipo de cuenta<select id="registerAccountType"><option value="consumer">Persona que busca horas</option><option value="business">Empresa o profesional</option></select></label>
+      <label id="registerNameLabel">Nombre completo<input id="registerBusiness" required placeholder="Ej: Camila Rojas"></label>
       <label>Correo electrónico<input id="registerEmail" type="email" required autocomplete="email" placeholder="empresa@correo.cl"></label>
       <label>Crear contraseña<input id="registerPassword" type="password" minlength="6" required autocomplete="new-password" placeholder="Mínimo 6 caracteres"></label>
       <button class="btn btn-accent btn-full" type="submit">Crear cuenta <span>→</span></button>
@@ -53,62 +55,27 @@
 <script src="config.js"></script><script src="supabase-client.js"></script><script src="auth.js"></script>
 <script>
   const tabs=document.querySelectorAll('.auth-tab'),loginForm=document.getElementById('loginForm'),registerForm=document.getElementById('registerForm'),msg=document.getElementById('authMessage');
-
-  const show=(m,type='error')=>{
-    msg.replaceChildren();
-    msg.textContent=m;
-    msg.className=`auth-message auth-message-${type}`;
-  };
-
-  const showEmailConfirmation=(email)=>{
-    msg.replaceChildren();
-    msg.className='auth-message auth-message-success auth-confirmation';
-
-    const icon=document.createElement('div');
-    icon.className='auth-confirmation-icon';
-    icon.textContent='✓';
-
-    const body=document.createElement('div');
-    const title=document.createElement('strong');
-    title.textContent='¡Cuenta creada correctamente!';
-    const text=document.createElement('p');
-    text.textContent=`Te enviamos un correo de confirmación a ${email}. Abre tu correo, confirma tu cuenta y luego vuelve aquí para iniciar sesión.`;
-    const hint=document.createElement('small');
-    hint.textContent='Si no lo encuentras, revisa también Spam, Promociones o Correo no deseado.';
-
-    body.append(title,text,hint);
-
-    if(String(email||'').toLowerCase().endsWith('@gmail.com')){
-      const gmail=document.createElement('a');
-      gmail.className='auth-confirmation-gmail';
-      gmail.href='https://mail.google.com/';
-      gmail.target='_blank';
-      gmail.rel='noopener noreferrer';
-      gmail.textContent='Abrir Gmail ↗';
-      body.append(gmail);
-    }
-
-    msg.append(icon,body);
-  };
-
-  const friendly=e=>{const m=String(e?.message||e||'Error');if(m.includes('Invalid login credentials'))return 'Correo o contraseña incorrectos.';if(m.includes('User already registered'))return 'Ya existe una cuenta con ese correo.';if(m.toLowerCase().includes('email not confirmed'))return 'Todavía falta confirmar tu correo. Revisa el mensaje que te enviamos y pulsa el enlace de confirmación.';if(m.toLowerCase().includes('email rate limit exceeded'))return 'No pudimos enviar otro correo de confirmación por ahora. Puedes esperar un momento o continuar con Google.';if(m.toLowerCase().includes('unsupported provider')||m.toLowerCase().includes('provider is not enabled'))return 'Google todavía no está activado en Supabase. Activa Authentication → Sign In / Providers → Google.';if(m.includes('FILA_CERO_ACCOUNT_BLOCKED'))return 'Esta cuenta fue bloqueada dentro de Fila Cero por moderación. Tus otras aplicaciones de Supabase no se ven afectadas.';return m};
-
-  function activateTab(name,{keepMessage=false}={}){
-    tabs.forEach(x=>x.classList.toggle('active',x.dataset.tab===name));
-    const reg=name==='register';
-    loginForm.classList.toggle('hidden',reg);
-    registerForm.classList.toggle('hidden',!reg);
-    if(!keepMessage) msg.classList.add('hidden');
-  }
-
-  tabs.forEach(btn=>btn.addEventListener('click',()=>activateTab(btn.dataset.tab)));
-  loginForm.addEventListener('submit',async e=>{e.preventDefault();const b=e.submitter||e.currentTarget.querySelector('button[type=submit]');b.disabled=true;b.textContent='Ingresando…';try{await FCAUTH.login(loginEmail.value,loginPassword.value);location.href='profesional.html'}catch(err){show(friendly(err))}finally{b.disabled=false;b.innerHTML='Entrar al dashboard <span>→</span>'}});
-  registerForm.addEventListener('submit',async e=>{e.preventDefault();const b=e.submitter||e.currentTarget.querySelector('button[type=submit]');b.disabled=true;b.textContent='Creando cuenta…';try{const email=registerEmail.value.trim();const result=await FCAUTH.createAccount({businessName:registerBusiness.value,email,password:registerPassword.value});if(result.needsEmailConfirmation){loginEmail.value=email;activateTab('login',{keepMessage:true});showEmailConfirmation(email);loginPassword.focus()}else{location.href='profesional.html'}}catch(err){show(friendly(err))}finally{b.disabled=false;b.innerHTML='Crear cuenta <span>→</span>'}});
-  document.getElementById('googleLoginBtn').addEventListener('click',async()=>{try{await FCAUTH.googleLogin()}catch(err){show(friendly(err))}});
   const params=new URLSearchParams(location.search);
-  if(params.get('blocked')==='1') show('Esta cuenta fue bloqueada dentro de Fila Cero por moderación. Si crees que es un error, contacta al administrador.','error');
-  if(params.get('deleted')==='1') show('Tu empresa y sus datos fueron eliminados de Fila Cero. Puedes crear un perfil nuevo cuando quieras.','success');
-  (async()=>{try{const session=await FCAUTH.getSession();if(session) location.href='profesional.html'}catch(err){console.error(err)}})();
+  const requestedNext=['cuenta.html','profesional.html','admin.html'].includes(params.get('next'))?params.get('next'):'';
+  const requestedMode=params.get('mode')==='consumer'?'consumer':'business';
+  const accountType=document.getElementById('registerAccountType');
+  const nameLabel=document.getElementById('registerNameLabel');
+  accountType.value=requestedMode;
+  function syncAccountType(){const consumer=accountType.value==='consumer';nameLabel.firstChild.textContent=consumer?'Nombre completo':'Nombre del centro o profesional';registerBusiness.placeholder=consumer?'Ej: Camila Rojas':'Ej: Centro Psicología Concepción';}
+  accountType.addEventListener('change',syncAccountType);syncAccountType();
+
+  const show=(m,type='error')=>{msg.replaceChildren();msg.textContent=m;msg.className=`auth-message auth-message-${type}`;};
+  const showEmailConfirmation=(email)=>{msg.replaceChildren();msg.className='auth-message auth-message-success auth-confirmation';const icon=document.createElement('div');icon.className='auth-confirmation-icon';icon.textContent='✓';const body=document.createElement('div');const title=document.createElement('strong');title.textContent='¡Cuenta creada correctamente!';const text=document.createElement('p');text.textContent=`Te enviamos un correo de confirmación a ${email}. Abre tu correo, confirma tu cuenta y luego vuelve aquí para iniciar sesión.`;const hint=document.createElement('small');hint.textContent='Si no aparece, revisa Spam, Promociones o Correo no deseado.';body.append(title,text,hint);if(String(email||'').toLowerCase().endsWith('@gmail.com')){const gmail=document.createElement('a');gmail.className='auth-confirmation-gmail';gmail.href='https://mail.google.com/';gmail.target='_blank';gmail.rel='noopener noreferrer';gmail.textContent='Abrir Gmail ↗';body.append(gmail)}msg.append(icon,body)};
+  const friendly=e=>{const m=String(e?.message||e||'Error');if(m.includes('Invalid login credentials'))return 'Correo o contraseña incorrectos.';if(m.includes('User already registered'))return 'Ya existe una cuenta con ese correo.';if(m.toLowerCase().includes('email not confirmed'))return 'Todavía falta confirmar tu correo. Revisa el mensaje que te enviamos.';if(m.toLowerCase().includes('email rate limit exceeded'))return 'No pudimos enviar otro correo por ahora. Espera un momento o continúa con Google.';if(m.toLowerCase().includes('unsupported provider')||m.toLowerCase().includes('provider is not enabled'))return 'Google todavía no está activado en Supabase.';if(m.includes('FILA_CERO_ACCOUNT_BLOCKED'))return 'Esta cuenta fue bloqueada dentro de Fila Cero por moderación.';return m};
+  function destination(mode=requestedMode){return requestedNext||(mode==='consumer'?'cuenta.html':'profesional.html')}
+  function activateTab(name,{keepMessage=false}={}){tabs.forEach(x=>x.classList.toggle('active',x.dataset.tab===name));const reg=name==='register';loginForm.classList.toggle('hidden',reg);registerForm.classList.toggle('hidden',!reg);if(!keepMessage)msg.classList.add('hidden')}
+  tabs.forEach(btn=>btn.addEventListener('click',()=>activateTab(btn.dataset.tab)));
+  loginForm.addEventListener('submit',async e=>{e.preventDefault();const b=e.submitter;b.disabled=true;b.textContent='Ingresando…';try{await FCAUTH.login(loginEmail.value,loginPassword.value);location.href=destination()}catch(err){show(friendly(err))}finally{b.disabled=false;b.innerHTML='Iniciar sesión <span>→</span>'}});
+  registerForm.addEventListener('submit',async e=>{e.preventDefault();const b=e.submitter;b.disabled=true;b.textContent='Creando cuenta…';try{const email=registerEmail.value.trim(),mode=accountType.value;const result=await FCAUTH.createAccount({businessName:mode==='business'?registerBusiness.value:'',name:registerBusiness.value,email,password:registerPassword.value,accountType:mode});if(result.needsEmailConfirmation){loginEmail.value=email;activateTab('login',{keepMessage:true});showEmailConfirmation(email)}else{location.href=destination(mode)}}catch(err){show(friendly(err))}finally{b.disabled=false;b.innerHTML='Crear cuenta <span>→</span>'}});
+  document.getElementById('googleLoginBtn').addEventListener('click',async()=>{try{await FCAUTH.googleLogin(destination())}catch(err){show(friendly(err))}});
+  if(params.get('blocked')==='1')show('Esta cuenta fue bloqueada dentro de Fila Cero por moderación.','error');
+  if(params.get('deleted')==='1')show('Tu empresa y sus datos fueron eliminados de Fila Cero.','success');
+  (async()=>{try{const session=await FCAUTH.getSession();if(session&&requestedNext)location.href=requestedNext}catch(err){console.error(err)}})();
 </script>
-<script src="app.js"></script>
+<script src="app.js"></script><script src="features-v013.js"></script>
 </body></html>

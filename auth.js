@@ -11,6 +11,7 @@
   const RPC_ADMIN_DELETE_BUSINESS = db.adminDeleteBusinessRpc || 'fila_cero_admin_delete_business';
   const RPC_ADMIN_LIST_BLOCKED = db.adminListBlockedRpc || 'fila_cero_admin_list_blocked';
   const RPC_ADMIN_UNBLOCK = db.adminUnblockRpc || 'fila_cero_admin_unblock_owner';
+  const RPC_CLAIM_RESERVATIONS = db.claimReservationsRpc || 'fila_cero_claim_reservations';
   const COMMUNES=['Concepción','Talcahuano','Hualpén','San Pedro de la Paz','Chiguayante','Penco','Tomé','Hualqui','Coronel','Lota','Santa Juana'];
 
   function assertClient(){
@@ -92,44 +93,35 @@
     return ensureBusiness(user);
   }
 
-  async function createAccount({businessName,email,password}){
+  async function createAccount({businessName,name,email,password,accountType='business'}){
     assertClient();
+    const isBusiness=accountType!=='consumer';
+    const displayName=String(name||businessName||'').trim();
+    const destination=isBusiness?'profesional.html':'cuenta.html';
     const {data,error}=await sb.auth.signUp({
       email:String(email||'').trim().toLowerCase(),
       password:String(password||''),
       options:{
-        emailRedirectTo:new URL('profesional.html',getAppBaseUrl()).href,
+        emailRedirectTo:new URL(destination,getAppBaseUrl()).href,
         data:{
-          fila_cero_business_name:String(businessName||'Mi empresa').trim(),
+          fila_cero_business_name:isBusiness?String(businessName||displayName||'Mi empresa').trim():'',
+          fila_cero_display_name:displayName,
+          fila_cero_account_type:isBusiness?'business':'consumer',
           fila_cero_source:'fila-cero'
         }
       }
     });
     if(error) throw error;
-    if(data?.session && data?.user) await ensureBusiness(data.user,businessName);
-    return {
-      user:data?.user||null,
-      session:data?.session||null,
-      needsEmailConfirmation:!!data?.user&&!data?.session
-    };
+    if(isBusiness && data?.session && data?.user) await ensureBusiness(data.user,businessName||displayName);
+    return {user:data?.user||null,session:data?.session||null,needsEmailConfirmation:!!data?.user&&!data?.session,destination};
   }
 
   async function login(email,password){
     assertClient();
     const {data,error}=await sb.auth.signInWithPassword({
-      email:String(email||'').trim().toLowerCase(),
-      password:String(password||'')
+      email:String(email||'').trim().toLowerCase(),password:String(password||'')
     });
     if(error) throw error;
-    if(data?.user){
-      try{ await ensureBusiness(data.user); }
-      catch(err){
-        if(String(err?.message||'').includes('FILA_CERO_ACCOUNT_BLOCKED')){
-          await sb.auth.signOut();
-        }
-        throw err;
-      }
-    }
     return data;
   }
 
@@ -184,18 +176,49 @@
     return 'https://fila-cero.concepcion.workers.dev/';
   }
 
-  async function googleLogin(){
+  async function googleLogin(destination='profesional.html'){
     assertClient();
     if(location.protocol==='file:'){
       throw new Error('Google Login necesita abrir Fila Cero desde un dominio HTTPS o localhost, no con doble clic en el HTML.');
     }
-    const redirectTo=new URL('profesional.html',getAppBaseUrl()).href;
+    const safeDestination=['profesional.html','cuenta.html'].includes(destination)?destination:'profesional.html';
+    const redirectTo=new URL(safeDestination,getAppBaseUrl()).href;
     const {data,error}=await sb.auth.signInWithOAuth({
       provider:'google',
       options:{redirectTo,queryParams:{prompt:'select_account'}}
     });
     if(error) throw error;
     return data;
+  }
+
+
+  async function hasBusiness(){
+    const user=await currentUser();
+    if(!user)return null;
+    const {data,error}=await sb.from(T_BUSINESSES).select('*').eq('owner_id',user.id).maybeSingle();
+    if(error)throw error;
+    return data?normalizeBusiness(data):null;
+  }
+
+  async function sendPasswordReset(email){
+    assertClient();
+    const redirectTo=new URL('nueva-contrasena.html',getAppBaseUrl()).href;
+    const {data,error}=await sb.auth.resetPasswordForEmail(String(email||'').trim().toLowerCase(),{redirectTo});
+    if(error)throw error;
+    return data;
+  }
+
+  async function updatePassword(password){
+    assertClient();
+    const {data,error}=await sb.auth.updateUser({password:String(password||'')});
+    if(error)throw error;
+    return data;
+  }
+
+  async function claimReservations(){
+    const {data,error}=await sb.rpc(RPC_CLAIM_RESERVATIONS);
+    if(error)throw error;
+    return Number(data||0);
   }
 
   async function requireBusiness(){
@@ -323,6 +346,7 @@
     getSession,
     currentUser,
     currentBusiness,
+    hasBusiness,
     isAdmin,
     isBlocked,
     createAccount,
@@ -331,6 +355,9 @@
     updateBusiness,
     getBusiness,
     googleLogin,
+    sendPasswordReset,
+    updatePassword,
+    claimReservations,
     requireBusiness,
     requireAdmin,
     uploadPortfolio,

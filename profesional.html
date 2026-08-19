@@ -15,11 +15,19 @@
     <div class="stats-cluster three-stats"><article class="stat-card dark-stat"><span>ACTIVOS</span><strong id="activeSlotsCount">0</strong><small>cupos visibles</small></article><article class="stat-card"><span>RESERVADOS</span><strong id="bookedSlotsCount">0</strong><small>reservas recibidas</small></article><article class="stat-card"><span>PERFIL</span><strong id="profileCompletion">0%</strong><small>completado</small></article></div>
   </section>
 
-  <nav class="dashboard-nav"><a href="#agenda">Agenda</a><a href="#publicar">Añadir horas</a><a href="#perfil">Perfil público</a><a href="#reservas">Reservas</a></nav>
+  <nav class="dashboard-nav"><a href="#agenda">Agenda</a><a href="#estadisticas">Estadísticas</a><a href="#publicar">Añadir horas</a><a href="#perfil">Perfil público</a><a href="#reservas">Reservas</a><a href="cuenta.html">Mi cuenta</a></nav>
 
   <section class="dashboard-summary" id="agenda">
     <div class="panel compact-panel"><div class="panel-heading"><span class="eyebrow">PRÓXIMOS CUPOS</span><h2>Mi agenda publicada</h2><p>Horas activas, reservadas y vencidas de esta cuenta.</p></div><div id="professionalSlots" class="pro-slots"></div></div>
     <div class="panel live-preview-panel"><div class="panel-heading"><span class="eyebrow">VISTA EN VIVO</span><h2>Así te ven</h2><p>Último cupo activo publicado por tu empresa.</p></div><div id="professionalLivePreview" class="live-market-preview"></div><a id="profilePreviewButton" class="btn btn-dark btn-full" href="empresa.html">Abrir mi perfil público <span>↗</span></a></div>
+  </section>
+
+  <section class="panel dashboard-section business-stats-section" id="estadisticas">
+    <div class="panel-heading"><span class="eyebrow">RENDIMIENTO</span><h2>Estadísticas de tu empresa</h2><p>Visualizaciones, reservas y reputación de tu perfil en Fila Cero.</p></div>
+    <div id="businessStatsV13" class="business-stats-wrap">
+      <div class="business-stats-grid"><article><span>VISUALIZACIONES</span><strong id="statViews">0</strong><small>visitas al perfil</small></article><article><span>RESERVAS</span><strong id="statReservations">0</strong><small>totales</small></article><article><span>CALIFICACIÓN</span><strong id="statRating">—</strong><small>promedio</small></article><article><span>CONVERSIÓN</span><strong id="statConversion">0%</strong><small>reservas / visitas</small></article></div>
+      <div id="statsDetail" class="stats-detail-grid"></div>
+    </div>
   </section>
 
   <section class="panel publish-panel dashboard-section" id="publicar">
@@ -100,5 +108,5 @@
     </div>
   </footer>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js"></script><script src="supabase-client.js"></script><script src="auth.js"></script><script src="app.js"></script>
+<script src="config.js"></script><script src="supabase-client.js"></script><script src="auth.js"></script><script src="app.js"></script><script src="features-v013.js"></script>
 </body></html>
