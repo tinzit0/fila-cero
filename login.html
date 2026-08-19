@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#071710">
+  <title>Fila Cero — Crear cuenta o iniciar sesión</title><link rel="stylesheet" href="styles.css">
+</head>
+<body class="auth-body">
+<header class="topbar topbar-dark"><a class="brand brand-light" href="index.html"><span class="brand-mark">0</span><span class="brand-copy"><strong>FILA CERO</strong><small>Empresas y profesionales</small></span></a><nav><a href="index.html">Volver al marketplace</a></nav></header>
+<main class="auth-main">
+  <section class="auth-visual">
+    <span class="eyebrow light">FILA CERO BUSINESS</span><h1>Tu agenda vacía<br><em>puede volver a llenarse.</em></h1>
+    <p>Crea el perfil de tu centro, publica cupos liberados y revisa las reservas recibidas desde un solo lugar.</p>
+    <div class="auth-feature-grid"><article><b>01</b><strong>Perfil público</strong><span>WhatsApp, portafolio, servicios y ubicación.</span></article><article><b>02</b><strong>Horas en vivo</strong><span>Publica cancelaciones en segundos.</span></article><article><b>03</b><strong>Reservas</strong><span>Revisa quién tomó cada cupo.</span></article></div>
+  </section>
+  <section class="auth-card">
+    <div class="auth-tabs"><button class="auth-tab active" data-tab="login">Iniciar sesión</button><button class="auth-tab" data-tab="register">Crear cuenta</button></div>
+    <button id="googleLoginBtn" class="google-btn" type="button"><span class="google-g">G</span> Continuar con Google</button>
+    <div class="auth-divider"><span>o continúa con correo</span></div>
+    <form id="loginForm" class="auth-form">
+      <label>Correo electrónico<input id="loginEmail" type="email" required autocomplete="email" placeholder="empresa@correo.cl"></label>
+      <label>Contraseña<input id="loginPassword" type="password" required autocomplete="current-password" placeholder="••••••••"></label>
+      <button class="btn btn-accent btn-full" type="submit">Entrar al dashboard <span>→</span></button>
+    </form>
+    <form id="registerForm" class="auth-form hidden">
+      <label>Nombre del centro o profesional<input id="registerBusiness" required placeholder="Ej: Centro Psicología Concepción"></label>
+      <label>Correo electrónico<input id="registerEmail" type="email" required autocomplete="email" placeholder="empresa@correo.cl"></label>
+      <label>Crear contraseña<input id="registerPassword" type="password" minlength="6" required autocomplete="new-password" placeholder="Mínimo 6 caracteres"></label>
+      <button class="btn btn-accent btn-full" type="submit">Crear cuenta <span>→</span></button>
+    </form>
+    <p class="auth-note">Conectado a Supabase Auth. Si tu proyecto exige confirmación de correo, Supabase enviará un email antes de permitir el primer inicio de sesión.</p>
+    <div id="authMessage" class="auth-message hidden" aria-live="polite"></div>
+  </section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script><script src="supabase-client.js"></script><script src="auth.js"></script>
+<script>
+  const tabs=document.querySelectorAll('.auth-tab'),loginForm=document.getElementById('loginForm'),registerForm=document.getElementById('registerForm'),msg=document.getElementById('authMessage');
+  const show=m=>{msg.textContent=m;msg.classList.remove('hidden')};
+  const friendly=e=>{const m=String(e?.message||e||'Error');if(m.includes('Invalid login credentials'))return 'Correo o contraseña incorrectos.';if(m.includes('User already registered'))return 'Ya existe una cuenta con ese correo.';return m};
+  tabs.forEach(btn=>btn.addEventListener('click',()=>{tabs.forEach(x=>x.classList.remove('active'));btn.classList.add('active');const reg=btn.dataset.tab==='register';loginForm.classList.toggle('hidden',reg);registerForm.classList.toggle('hidden',!reg);msg.classList.add('hidden')}));
+  loginForm.addEventListener('submit',async e=>{e.preventDefault();const b=e.submitter||e.currentTarget.querySelector('button[type=submit]');b.disabled=true;b.textContent='Ingresando…';try{await FCAUTH.login(loginEmail.value,loginPassword.value);location.href='profesional.html'}catch(err){show(friendly(err))}finally{b.disabled=false;b.innerHTML='Entrar al dashboard <span>→</span>'}});
+  registerForm.addEventListener('submit',async e=>{e.preventDefault();const b=e.submitter||e.currentTarget.querySelector('button[type=submit]');b.disabled=true;b.textContent='Creando cuenta…';try{const result=await FCAUTH.createAccount({businessName:registerBusiness.value,email:registerEmail.value,password:registerPassword.value});if(result.needsEmailConfirmation){show('Cuenta creada. Revisa tu correo y confirma la cuenta antes de iniciar sesión.');tabs[0].click()}else{location.href='profesional.html'}}catch(err){show(friendly(err))}finally{b.disabled=false;b.innerHTML='Crear cuenta <span>→</span>'}});
+  document.getElementById('googleLoginBtn').addEventListener('click',async()=>{try{await FCAUTH.googleLogin()}catch(err){show(friendly(err))}});
+  (async()=>{try{const session=await FCAUTH.getSession();if(session) location.href='profesional.html'}catch(err){console.error(err)}})();
+</script>
+</body></html>

@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#071710"><title>Perfil profesional — Fila Cero</title><link rel="stylesheet" href="styles.css"></head>
+<body class="business-public-body">
+<header class="topbar"><a class="brand" href="index.html"><span class="brand-mark">0</span><span class="brand-copy"><strong>FILA CERO</strong><small>Gran Concepción</small></span></a><nav><a href="index.html#disponibles">Buscar horas</a><a class="btn btn-dark btn-small" href="login.html">Soy profesional <span>↗</span></a></nav></header>
+<main id="businessPublicPage" class="business-public-main">
+  <section class="business-cover"><div class="business-avatar" id="businessAvatar">FC</div><div class="business-cover-copy"><span id="businessCategoryBadge" class="eyebrow light">CENTRO PROFESIONAL</span><h1 id="businessName">Perfil profesional</h1><p id="businessLocation">Gran Concepción</p></div></section>
+  <section class="business-public-grid">
+    <div class="business-primary">
+      <section class="public-section"><span class="eyebrow">ACERCA DE</span><h2>Conoce este centro</h2><p id="businessDescription" class="business-description"></p><div id="businessContacts" class="contact-actions"></div></section>
+      <section class="public-section"><span class="eyebrow">PORTAFOLIO</span><h2>Espacio y trabajo</h2><div id="businessPortfolio" class="portfolio-grid"></div></section>
+      <section class="public-section"><span class="eyebrow">HORAS DISPONIBLES</span><h2>Reserva un cupo</h2><div id="businessSlots" class="profile-slots"></div></section>
+    </div>
+    <aside class="business-aside"><div class="panel"><span class="eyebrow">UBICACIÓN</span><h2 id="asideBusinessName">Centro</h2><p id="asideAddress"></p><div id="businessMap" class="map-shell profile-map"></div></div><div class="panel trust-panel"><strong>Perfil en Fila Cero</strong><p>La información del perfil es administrada por la empresa. Verifica directamente condiciones y prestaciones antes de asistir.</p></div></aside>
+  </section>
+</main>
+<div class="toast hidden" id="toast"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script><script src="supabase-client.js"></script><script src="auth.js"></script><script src="app.js"></script>
+</body></html>

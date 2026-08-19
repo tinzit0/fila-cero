@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#071710">
+  <title>Fila Cero Business — Dashboard</title><link rel="stylesheet" href="styles.css">
+</head>
+<body class="pro-body">
+<header class="topbar topbar-dark">
+  <a class="brand brand-light" href="index.html"><span class="brand-mark">0</span><span class="brand-copy"><strong>FILA CERO</strong><small>Business</small></span></a>
+  <nav><a href="index.html">Marketplace</a><a id="publicProfileLink" href="empresa.html">Perfil público</a><button id="logoutBtn" class="nav-ghost-btn" type="button">Cerrar sesión</button><span class="pro-badge">PRO</span></nav>
+</header>
+<main class="pro-main premium-pro-main">
+  <section class="pro-hero premium-pro-hero dashboard-hero">
+    <div><span class="eyebrow light">PANEL DE EMPRESA</span><h1>Hola, <em id="businessHeroName">tu centro.</em></h1><p>Gestiona tu vitrina pública, publica nuevas horas y revisa las reservas que recibió tu empresa.</p></div>
+    <div class="stats-cluster three-stats"><article class="stat-card dark-stat"><span>ACTIVOS</span><strong id="activeSlotsCount">0</strong><small>cupos visibles</small></article><article class="stat-card"><span>RESERVADOS</span><strong id="bookedSlotsCount">0</strong><small>reservas recibidas</small></article><article class="stat-card"><span>PERFIL</span><strong id="profileCompletion">0%</strong><small>completado</small></article></div>
+  </section>
+
+  <nav class="dashboard-nav"><a href="#agenda">Agenda</a><a href="#publicar">Añadir horas</a><a href="#perfil">Perfil público</a><a href="#reservas">Reservas</a></nav>
+
+  <section class="dashboard-summary" id="agenda">
+    <div class="panel compact-panel"><div class="panel-heading"><span class="eyebrow">PRÓXIMOS CUPOS</span><h2>Mi agenda publicada</h2><p>Horas activas, reservadas y vencidas de esta cuenta.</p></div><div id="professionalSlots" class="pro-slots"></div></div>
+    <div class="panel live-preview-panel"><div class="panel-heading"><span class="eyebrow">VISTA EN VIVO</span><h2>Así te ven</h2><p>Último cupo activo publicado por tu empresa.</p></div><div id="professionalLivePreview" class="live-market-preview"></div><a id="profilePreviewButton" class="btn btn-dark btn-full" href="empresa.html">Abrir mi perfil público <span>↗</span></a></div>
+  </section>
+
+  <section class="panel publish-panel dashboard-section" id="publicar">
+    <div class="panel-heading split-heading"><div><span class="eyebrow">NUEVA OPORTUNIDAD</span><h2>Añadir una hora disponible</h2><p>La empresa y ubicación se toman automáticamente desde tu perfil. Tú solo agregas el servicio y la hora.</p></div><span class="secure-chip">● EN VIVO</span></div>
+    <form id="publishForm" class="publish-form">
+      <div class="form-row"><label>Categoría<select id="category" required><option value="Dental">Dental</option><option value="Kinesiología">Kinesiología</option><option value="Veterinaria">Veterinaria</option><option value="Psicología">Atención psicológica</option><option value="Nutrición">Nutrición</option><option value="Otro">Otro</option></select></label><label>Servicio disponible<input id="serviceName" required placeholder="Ej: Sesión de psicología adultos"></label></div>
+      <div class="form-row triple-row"><label>Fecha<span class="date-control"><input id="slotDate" type="date" required></span></label><label>Hora<span class="date-control"><input id="slotTime" type="time" required></span></label><label>Duración (min)<input id="duration" type="number" min="10" step="5" value="60" required></label></div>
+      <div class="form-row"><label>Precio normal<input id="normalPrice" type="number" min="0" step="1000" required placeholder="35000"></label><label>Precio Fila Cero<input id="filaPrice" type="number" min="0" step="1000" required placeholder="28000"></label></div>
+      <div class="privacy-note"><strong>Especialmente para psicología:</strong> Fila Cero publica disponibilidad, profesional, modalidad, precio y ubicación. No solicita diagnóstico, motivo de consulta ni notas clínicas.</div>
+      <button class="btn btn-accent btn-large" type="submit">Publicar hora <span>→</span></button>
+    </form>
+  </section>
+
+  <section class="panel dashboard-section" id="perfil">
+    <div class="panel-heading split-heading"><div><span class="eyebrow">VITRINA PÚBLICA</span><h2>Perfil de mi empresa</h2><p>Funciona como una mini red social profesional dentro de Fila Cero.</p></div><span class="secure-chip">PORTAFOLIO</span></div>
+    <form id="businessProfileForm" class="publish-form">
+      <div class="form-row"><label>Nombre público<input id="profileName" required></label><label>Rubro principal<select id="profileCategory"><option>Psicología</option><option>Dental</option><option>Kinesiología</option><option>Veterinaria</option><option>Nutrición</option><option>Otro</option></select></label></div>
+      <label>Descripción del centro<textarea id="profileDescription" rows="4" placeholder="Cuenta quiénes son, qué atención realizan y qué los diferencia."></textarea></label>
+      <div class="form-row"><label>Comuna<select id="profileCity" required><option>Concepción</option><option>Talcahuano</option><option>Hualpén</option><option>San Pedro de la Paz</option><option>Chiguayante</option><option>Penco</option><option>Tomé</option><option>Hualqui</option><option>Coronel</option><option>Lota</option><option>Santa Juana</option></select></label><label>Sector<input id="profileSector" placeholder="Ej: Centro, Lomas Coloradas"></label></div>
+      <label>Dirección<input id="profileAddress" placeholder="Ej: Barros Arana 850"></label>
+      <div class="form-row triple-row"><label>WhatsApp<input id="profileWhatsapp" placeholder="56912345678"></label><label>Instagram<input id="profileInstagram" placeholder="usuario_sin_@"></label><label>Sitio web<input id="profileWebsite" type="url" placeholder="https://..."></label></div>
+      <div class="portfolio-editor"><div><strong>Portafolio visual</strong><p>Sube hasta 3 imágenes JPG, PNG o WEBP (máx. 5 MB cada una). Se guardarán en Supabase Storage. También puedes mantener URLs manuales.</p></div><label>Subir imágenes<input id="portfolioFiles" type="file" accept="image/jpeg,image/png,image/webp" multiple></label><div class="form-row triple-row"><label>Imagen / URL 1<input id="portfolio1" type="url" placeholder="https://..."></label><label>Imagen / URL 2<input id="portfolio2" type="url" placeholder="https://..."></label><label>Imagen / URL 3<input id="portfolio3" type="url" placeholder="https://..."></label></div></div>
+      <button class="btn btn-dark btn-large" type="submit">Guardar perfil público <span>→</span></button>
+    </form>
+  </section>
+
+  <section class="panel dashboard-section" id="reservas">
+    <div class="panel-heading"><span class="eyebrow">CLIENTES AGENDADOS</span><h2>Horas reservadas</h2><p>Aquí aparecen únicamente las reservas realizadas en cupos publicados por tu empresa.</p></div>
+    <div id="businessReservations" class="business-reservations"></div>
+  </section>
+</main>
+<div class="toast hidden" id="toast" aria-live="polite"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script><script src="supabase-client.js"></script><script src="auth.js"></script><script src="app.js"></script>
+</body></html>

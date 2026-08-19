@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#071710" />
+  <meta name="description" content="Fila Cero Gran Concepción conecta personas con horas liberadas en centros y servicios de las comunas del área metropolitana." />
+  <title>Fila Cero Gran Concepción — Una hora acaba de liberarse</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html" aria-label="Fila Cero inicio">
+      <span class="brand-mark">0</span>
+      <span class="brand-copy"><strong>FILA CERO</strong><small>Disponibilidad inmediata</small></span>
+    </a>
+    <nav>
+      <a href="#disponibles">Explorar</a>
+      <a href="#mis-reservas">Mis reservas</a>
+      <a class="btn btn-dark btn-small" data-account-link href="login.html">Crear cuenta / Iniciar sesión</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero premium-hero">
+      <div class="hero-copy">
+        <div class="hero-kicker"><span class="live-dot"></span> CUPOS LIBERADOS EN TIEMPO REAL</div>
+        <h1>Tu próxima hora<br><em>puede ser ahora.</em></h1>
+        <p>Encuentra cancelaciones de último minuto en todo el Gran Concepción. Elige tu comuna y reserva un cupo disponible sin llamadas, sin filas y sin revisar agendas completas.</p>
+
+        <form class="search-box premium-search" id="searchForm">
+          <label>
+            <span>Servicio</span>
+            <select id="serviceFilter">
+              <option value="todos">Todos los servicios</option>
+              <option value="Dental">Dentista</option>
+              <option value="Kinesiología">Kinesiología</option>
+              <option value="Veterinaria">Veterinaria</option>
+              <option value="Psicología">Atención psicológica</option>
+              <option value="Nutrición">Nutrición</option>
+              <option value="Otro">Otros</option>
+            </select>
+          </label>
+          <label>
+            <span>Comuna</span>
+            <select id="cityFilter" aria-label="Comuna del Gran Concepción">
+              <option value="todas" selected>Todas las comunas</option>
+              <option value="Concepción">Concepción</option>
+              <option value="Talcahuano">Talcahuano</option>
+              <option value="Hualpén">Hualpén</option>
+              <option value="San Pedro de la Paz">San Pedro de la Paz</option>
+              <option value="Chiguayante">Chiguayante</option>
+              <option value="Penco">Penco</option>
+              <option value="Tomé">Tomé</option>
+              <option value="Hualqui">Hualqui</option>
+              <option value="Coronel">Coronel</option>
+              <option value="Lota">Lota</option>
+              <option value="Santa Juana">Santa Juana</option>
+            </select>
+          </label>
+          <label>
+            <span>Disponibilidad</span>
+            <select id="timeFilter">
+              <option value="todos">Cualquier hora</option>
+              <option value="2h">Próximas 2 horas</option>
+              <option value="hoy">Hoy</option>
+              <option value="manana">Mañana</option>
+            </select>
+          </label>
+          <button class="btn btn-accent" type="submit">Encontrar una hora <span>→</span></button>
+        </form>
+
+        <div class="trust-row">
+          <div><strong id="heroActiveCount">0</strong><span>cupos activos</span></div>
+          <i></i>
+          <div><strong>11 comunas</strong><span>cobertura metropolitana</span></div>
+          <i></i>
+          <div><strong>Mapa</strong><span>ubicación del centro</span></div>
+        </div>
+      </div>
+
+      <aside class="hero-showcase" aria-label="Último cupo liberado">
+        <div class="showcase-orbit orbit-one"></div>
+        <div class="showcase-orbit orbit-two"></div>
+        <div class="showcase-head">
+          <div>
+            <span class="mini-label">ÚLTIMA OPORTUNIDAD</span>
+            <span class="live-pill"><span></span> EN VIVO</span>
+          </div>
+          <div class="showcase-symbol">FC</div>
+        </div>
+        <div id="latestSlotCard" class="latest-slot"></div>
+      </aside>
+    </section>
+
+    <section class="live-strip">
+      <div class="live-strip-inner">
+        <span><b></b> Marketplace actualizado</span>
+        <p>Los cupos publicados por centros del Gran Concepción aparecen automáticamente aquí.</p>
+        <a href="login.html">Publicar un cupo →</a>
+      </div>
+    </section>
+
+    <section class="section marketplace-section" id="disponibles">
+      <div class="section-heading premium-heading">
+        <div>
+          <span class="eyebrow">MARKETPLACE</span>
+          <h2>Disponibles para reservar</h2>
+          <p id="resultsText">Buscando las mejores oportunidades...</p>
+        </div>
+        <div class="sort-box">
+          <label for="sortSelect">Ordenar por</label>
+          <select id="sortSelect">
+            <option value="hora">Hora más próxima</option>
+            <option value="precio">Menor precio</option>
+            <option value="reciente">Publicado recientemente</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="chips" id="quickFilters">
+        <button class="chip active" data-service="todos">Todos</button>
+        <button class="chip" data-service="Dental">Dental</button>
+        <button class="chip" data-service="Kinesiología">Kinesiología</button>
+        <button class="chip" data-service="Veterinaria">Veterinaria</button>
+        <button class="chip" data-service="Psicología">Atención psicológica</button>
+        <button class="chip" data-service="Nutrición">Nutrición</button>
+      </div>
+
+      <div class="slots-grid" id="slotsGrid"></div>
+      <div class="empty hidden" id="emptyState">
+        <div class="empty-icon">⌛</div>
+        <h3>No encontramos cupos con esos filtros</h3>
+        <p>Prueba cambiando el servicio, la comuna o ampliando el horario. Fila Cero cubre las 11 comunas del Gran Concepción.</p>
+      </div>
+    </section>
+
+    <section class="experience-section">
+      <div class="experience-copy">
+        <span class="eyebrow light">EXPERIENCIA FILA CERO</span>
+        <h2>Una cancelación deja de ser una hora perdida.</h2>
+        <p>El centro recupera una oportunidad y tú consigues atención sin esperar semanas. Fila Cero conecta ambos lados justo cuando el cupo aparece.</p>
+      </div>
+      <div class="steps premium-steps">
+        <article><span>01</span><h3>Descubre</h3><p>Filtra cupos que siguen activos y cercanos.</p></article>
+        <article><span>02</span><h3>Ubica</h3><p>Revisa el centro en Google Maps antes de reservar.</p></article>
+        <article><span>03</span><h3>Reserva</h3><p>Confirma tus datos y el cupo desaparece del marketplace.</p></article>
+      </div>
+    </section>
+
+    <section class="section reservations" id="mis-reservas">
+      <div class="section-heading premium-heading">
+        <div>
+          <span class="eyebrow">MI CUENTA</span>
+          <h2>Mis reservas</h2>
+          <p>Las reservas demo quedan guardadas en este navegador.</p>
+        </div>
+      </div>
+      <div id="reservationsList" class="reservation-list"></div>
+    </section>
+  </main>
+
+  <div class="modal hidden" id="bookingModal" role="dialog" aria-modal="true" aria-labelledby="bookingTitle">
+    <div class="modal-card premium-modal">
+      <button class="modal-close" id="closeModal" aria-label="Cerrar">×</button>
+      <span class="eyebrow">RESERVAR CUPO</span>
+      <h2 id="bookingTitle">Confirma tu reserva</h2>
+      <div class="booking-layout">
+        <div>
+          <div id="bookingSummary" class="booking-summary"></div>
+          <form id="bookingForm" class="booking-form">
+            <label>Nombre completo<input id="clientName" required autocomplete="name" placeholder="Ej: Camila Rojas"></label>
+            <label>Correo<input id="clientEmail" required type="email" autocomplete="email" placeholder="nombre@correo.cl"></label>
+            <label>Teléfono<input id="clientPhone" required type="tel" autocomplete="tel" placeholder="+56 9 1234 5678"></label>
+            <label class="check"><input type="checkbox" required> <span>Acepto que Fila Cero use estos datos únicamente para gestionar esta reserva.</span></label>
+            <button class="btn btn-accent btn-full" type="submit">Confirmar reserva <span>→</span></button>
+          </form>
+        </div>
+        <div class="booking-map-column">
+          <div id="bookingMap" class="map-shell"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal hidden" id="mapModal" role="dialog" aria-modal="true" aria-labelledby="mapTitle">
+    <div class="modal-card map-modal-card">
+      <button class="modal-close" id="closeMapModal" aria-label="Cerrar">×</button>
+      <span class="eyebrow">UBICACIÓN DEL CENTRO</span>
+      <h2 id="mapTitle">Ver ubicación</h2>
+      <div id="mapModalMeta" class="map-modal-meta"></div>
+      <div id="mapModalContent" class="map-shell map-shell-large"></div>
+    </div>
+  </div>
+
+  <div class="toast hidden" id="toast" aria-live="polite"></div>
+
+  <footer>
+    <div class="brand"><span class="brand-mark">0</span><span class="brand-copy"><strong>FILA CERO</strong><small>Disponibilidad inmediata</small></span></div>
+    <p>Disponibilidad de último minuto en el Gran Concepción.</p>
+    <small>Demo MVP · Sin almacenamiento de datos clínicos.</small>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script><script src="supabase-client.js"></script><script src="auth.js"></script><script src="app.js"></script>
+</body>
+</html>
