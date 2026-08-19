@@ -47,6 +47,18 @@
       </div>
       <div id="dashboardProfileMap" class="map-shell dashboard-profile-map"></div>
     </div>
+    <div class="profile-visibility-control" id="profileVisibilityControl">
+      <div>
+        <span class="eyebrow">VISIBILIDAD</span>
+        <h3>Mostrar mi perfil públicamente</h3>
+        <p id="profileVisibilityHelp">Cuando está habilitado, tu empresa aparece en el directorio de Fila Cero y las personas pueden abrir tu perfil, ver tu portafolio y medios de contacto.</p>
+      </div>
+      <label class="profile-switch" for="profileEnabledToggle">
+        <input id="profileEnabledToggle" type="checkbox" checked>
+        <span class="profile-switch-track" aria-hidden="true"><span></span></span>
+        <strong id="profileVisibilityLabel">Habilitado</strong>
+      </label>
+    </div>
     <form id="businessProfileForm" class="publish-form">
       <div class="form-row"><label>Nombre público<input id="profileName" required></label><label>Rubro principal<select id="profileCategory"><option>Psicología</option><option>Dental</option><option>Kinesiología</option><option>Veterinaria</option><option>Nutrición</option><option>Otro</option></select></label></div>
       <label>Descripción del centro<textarea id="profileDescription" rows="4" placeholder="Cuenta quiénes son, qué atención realizan y qué los diferencia."></textarea></label>

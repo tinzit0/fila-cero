@@ -112,7 +112,7 @@
     // Esto evita que campos de presentación como `provider` rompan el guardado.
     const allowed=new Set([
       'name','category','description','city','sector','address','whatsapp','instagram',
-      'website','portfolio_urls','latitude','longitude','is_active'
+      'website','portfolio_urls','latitude','longitude','is_active','profile_enabled'
     ]);
     const clean=Object.fromEntries(Object.entries(patch||{}).filter(([key])=>allowed.has(key)));
 
@@ -200,7 +200,8 @@
     return {
       ...b,
       ownerId:b.owner_id,
-      portfolio:Array.isArray(b.portfolio_urls)?b.portfolio_urls:[]
+      portfolio:Array.isArray(b.portfolio_urls)?b.portfolio_urls:[],
+      profileEnabled:b.profile_enabled!==false
     };
   }
 
