@@ -73,7 +73,7 @@ async function renderLocationMap(container,s){
   container.innerHTML=mapFallbackHtml(s);
 }
 function normalizeSlot(row,business=null){const b=business||row.business||null;return {id:row.id,businessId:row.business_id,provider:b?.name||'Centro profesional',service:row.service,category:row.category,city:row.city,sector:row.sector||'',date:row.slot_date,time:String(row.start_time||'').slice(0,5),normalPrice:Number(row.normal_price||0),price:Number(row.fila_price||0),duration:Number(row.duration_minutes||30),address:row.address,status:row.status,createdAt:row.created_at,latitude:Number(b?.latitude)||null,longitude:Number(b?.longitude)||null,business:b||null}}
-function humanError(err){const msg=String(err?.message||err||'Error inesperado');const low=msg.toLowerCase();if(msg.includes('SLOT_UNAVAILABLE')||msg.includes('duplicate key value'))return 'Ese cupo acaba de ser reservado por otra persona.';if(msg.includes('Invalid login credentials'))return 'Correo o contraseña incorrectos.';if(low.includes('email rate limit exceeded'))return 'No pudimos enviar el correo de confirmación en este momento. Intenta más tarde o continúa con Google.';if(low.includes('unsupported provider')||low.includes('provider is not enabled'))return 'Google aún no está activado en Supabase. Habilita Authentication → Sign In / Providers → Google.';if(msg.includes('RESERVATION_NOT_OWNED'))return 'No tienes permiso para gestionar esa reserva.';return msg}
+function humanError(err){const msg=String(err?.message||err||'Error inesperado');const low=msg.toLowerCase();if(msg.includes('SLOT_UNAVAILABLE')||msg.includes('duplicate key value'))return 'Ese cupo acaba de ser reservado por otra persona.';if(msg.includes('Invalid login credentials'))return 'Correo o contraseña incorrectos.';if(low.includes('email rate limit exceeded'))return 'No pudimos enviar el correo de confirmación en este momento. Intenta más tarde o continúa con Google.';if(low.includes('unsupported provider')||low.includes('provider is not enabled'))return 'Google aún no está activado en Supabase. Habilita Authentication → Sign In / Providers → Google.';if(msg.includes('RESERVATION_NOT_OWNED'))return 'No tienes permiso para gestionar esa reserva.';if(msg.includes('FILA_CERO_ACCOUNT_BLOCKED'))return 'Esta cuenta está bloqueada dentro de Fila Cero por moderación.';if(msg.includes('FILA_CERO_ADMIN_REQUIRED'))return 'Esta sección es exclusiva del administrador de Fila Cero.';if(msg.includes('CANNOT_BLOCK_FILA_CERO_ADMIN'))return 'No puedes bloquear una cuenta administradora de Fila Cero.';return msg}
 
 async function initTopbar(){const link=document.querySelector('[data-account-link]');if(!link||!window.FCAUTH)return;try{const session=await FCAUTH.getSession();link.href=session?'profesional.html':'login.html';link.textContent=session?'Mi empresa':'Crear cuenta / Iniciar sesión'}catch{link.href='login.html'}}
 
@@ -178,9 +178,18 @@ async function initProfessional(){
   let business;
   try{business=await FCAUTH.requireBusiness();if(!business)return}catch(err){showToast(humanError(err));return}
   const user=await FCAUTH.currentUser();let slots=[],reservations=[],portfolioState=[];
+  try{if(await FCAUTH.isAdmin()){const adminLink=document.getElementById('adminPanelLink');if(adminLink)adminLink.classList.remove('hidden')}}catch(err){console.warn('No se pudo comprobar rol admin',err)}
   const today=TODAY_STR;slotDate.min=today;slotDate.value=today;
   businessHeroName.textContent=business.name;publicProfileLink.href=`empresa.html?id=${encodeURIComponent(business.id)}`;profilePreviewButton.href=publicProfileLink.href;
   logoutBtn.addEventListener('click',async()=>{try{await FCAUTH.logout();location.href='login.html'}catch(err){showToast(humanError(err))}});
+  const deleteMyBusinessBtn=document.getElementById('deleteMyBusinessBtn');
+  deleteMyBusinessBtn?.addEventListener('click',async()=>{
+    const typed=prompt('Esta acción borrará tu perfil, cupos, reservas y fotos de Fila Cero. Escribe ELIMINAR para confirmar.');
+    if(typed!=='ELIMINAR') return;
+    if(!confirm('Última confirmación: ¿eliminar definitivamente tu empresa de Fila Cero?')) return;
+    deleteMyBusinessBtn.disabled=true;deleteMyBusinessBtn.textContent='Eliminando…';
+    try{await FCAUTH.deleteMyBusiness();location.href='login.html?deleted=1'}catch(err){deleteMyBusinessBtn.disabled=false;deleteMyBusinessBtn.textContent='Eliminar mi empresa';showToast(humanError(err))}
+  });
 
   function mapOwnedSlot(row){return normalizeSlot(row,business)}
   function profileScore(b){const fields=['name','category','city','address','description','whatsapp'];return Math.round(fields.filter(k=>String(b[k]||'').trim()).length/fields.length*100)}
@@ -274,9 +283,80 @@ async function initBusinessProfile(){
   window.addEventListener('beforeunload',()=>{try{sb.removeChannel(channel)}catch{}})
 }
 
+
+async function initAdmin(){
+  const root=document.getElementById('adminPage');if(!root||!sb||!window.FCAUTH)return;
+  let user;
+  try{user=await FCAUTH.requireAdmin();if(!user)return}catch(err){showToast(humanError(err));return}
+  const list=document.getElementById('adminBusinessList');
+  const blockedList=document.getElementById('adminBlockedList');
+  const search=document.getElementById('adminBusinessSearch');
+  const logout=document.getElementById('adminLogoutBtn');
+  let businesses=[],blocked=[];
+
+  logout?.addEventListener('click',async()=>{try{await FCAUTH.logout();location.href='login.html'}catch(err){showToast(humanError(err))}});
+
+  const dateTime=v=>{try{return new Intl.DateTimeFormat('es-CL',{dateStyle:'medium',timeStyle:'short'}).format(new Date(v))}catch{return String(v||'')}};
+  const ownerInitial=b=>(b.name||b.owner_email||'FC').split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase();
+
+  function renderBlocked(){
+    adminBlockedCount.textContent=blocked.length;
+    if(!blocked.length){blockedList.innerHTML='<div class="dashboard-empty"><strong>No hay cuentas bloqueadas.</strong><span>Los bloqueos de moderación aparecerán aquí.</span></div>';return}
+    blockedList.innerHTML=blocked.map(b=>`<article class="admin-blocked-row"><div><strong>${escapeHtml(b.email||'Cuenta sin correo')}</strong><span>${escapeHtml(b.reason||'Moderación de Fila Cero')}</span><small>Bloqueado: ${escapeHtml(dateTime(b.blocked_at))}</small></div><button class="action-btn admin-unblock-btn" type="button" data-owner-id="${escapeHtml(b.owner_id)}">Desbloquear</button></article>`).join('');
+    blockedList.querySelectorAll('.admin-unblock-btn').forEach(btn=>btn.addEventListener('click',async()=>{if(!confirm('¿Desbloquear esta cuenta para que pueda volver a crear una empresa en Fila Cero?'))return;btn.disabled=true;try{await FCAUTH.adminUnblockOwner(btn.dataset.ownerId);showToast('Cuenta desbloqueada.');await loadAdmin()}catch(err){btn.disabled=false;showToast(humanError(err))}}));
+  }
+
+  function filteredBusinesses(){
+    const q=String(search?.value||'').trim().toLowerCase();
+    if(!q)return businesses;
+    return businesses.filter(b=>[b.name,b.owner_email,b.category,b.city,b.sector,b.address,b.description].some(v=>String(v||'').toLowerCase().includes(q)));
+  }
+
+  function renderBusinesses(){
+    const rows=filteredBusinesses();
+    adminBusinessCount.textContent=businesses.length;
+    adminPublicCount.textContent=businesses.filter(b=>b.profile_enabled!==false&&b.is_active!==false).length;
+    if(!rows.length){list.innerHTML='<div class="dashboard-empty"><strong>No encontramos empresas.</strong><span>Prueba con otro término de búsqueda.</span></div>';return}
+    list.innerHTML=rows.map(b=>{
+      const portfolio=Array.isArray(b.portfolio_urls)?b.portfolio_urls.map(safeHttpUrl).filter(Boolean):[];
+      const status=b.is_active===false?'INACTIVA':b.profile_enabled===false?'PERFIL OCULTO':'PÚBLICA';
+      const wa=safeDigits(b.whatsapp);
+      return `<article class="admin-business-card" data-business-id="${escapeHtml(b.id)}">
+        <div class="admin-business-head"><div class="business-avatar compact-avatar">${escapeHtml(ownerInitial(b))}</div><div><div class="admin-status-line"><span class="reservation-status">${escapeHtml(status)}</span><span>${escapeHtml(b.category||'Otro')}</span></div><h3>${escapeHtml(b.name||'Mi empresa')}</h3><p>${escapeHtml(b.owner_email||'Correo no disponible')}</p></div></div>
+        <div class="admin-business-body"><p>${escapeHtml(b.description||'Sin descripción pública.')}</p><div class="admin-meta-grid"><span><b>Comuna</b>${escapeHtml(b.city||'—')}</span><span><b>Sector</b>${escapeHtml(b.sector||'—')}</span><span><b>Cupos</b>${Number(b.slots_total||0)}</span><span><b>Reservas</b>${Number(b.reservations_total||0)}</span></div><small>⌖ ${escapeHtml(b.address||'Dirección sin completar')}</small></div>
+        ${portfolio.length?`<div class="admin-portfolio" data-admin-gallery="${escapeHtml(b.id)}">${portfolio.slice(0,4).map((url,i)=>`<button type="button" class="booking-mini-photo" data-portfolio-index="${i}"><img src="${escapeHtml(url)}" alt="Portafolio de ${escapeHtml(b.name)} ${i+1}" loading="lazy"></button>`).join('')}</div>`:''}
+        <div class="admin-business-actions">${b.profile_enabled!==false?`<a class="action-btn" href="empresa.html?id=${encodeURIComponent(b.id)}" target="_blank" rel="noopener">Ver perfil ↗</a>`:''}${wa?`<a class="action-btn" href="https://wa.me/${wa}" target="_blank" rel="noopener">WhatsApp ↗</a>`:''}<button class="action-btn danger admin-delete-only" type="button" data-id="${escapeHtml(b.id)}" data-name="${escapeHtml(b.name)}">Eliminar empresa</button><button class="btn btn-danger admin-delete-block" type="button" data-id="${escapeHtml(b.id)}" data-name="${escapeHtml(b.name)}">Eliminar y bloquear</button></div>
+      </article>`;
+    }).join('');
+
+    rows.forEach(b=>{const box=list.querySelector(`[data-admin-gallery="${CSS.escape(b.id)}"]`);const portfolio=Array.isArray(b.portfolio_urls)?b.portfolio_urls.map(safeHttpUrl).filter(Boolean):[];if(box&&portfolio.length)bindPortfolioViewer(box,portfolio,b.name)});
+
+    list.querySelectorAll('.admin-delete-only').forEach(btn=>btn.addEventListener('click',async()=>{
+      if(!confirm(`¿Eliminar ${btn.dataset.name} de Fila Cero? El usuario podrá crear otra empresa más adelante.`))return;
+      btn.disabled=true;try{await FCAUTH.adminDeleteBusiness(btn.dataset.id,{blockOwner:false,reason:'Eliminación administrativa'});showToast('Empresa eliminada de Fila Cero.');await loadAdmin()}catch(err){btn.disabled=false;showToast(humanError(err))}
+    }));
+    list.querySelectorAll('.admin-delete-block').forEach(btn=>btn.addEventListener('click',async()=>{
+      const reason=prompt(`Motivo de moderación para ${btn.dataset.name}:`,'Contenido o uso no permitido en Fila Cero');if(reason===null)return;
+      const typed=prompt('Esta acción elimina todos sus datos de Fila Cero y bloquea que recree la empresa. Escribe BLOQUEAR para confirmar.');if(typed!=='BLOQUEAR')return;
+      btn.disabled=true;try{await FCAUTH.adminDeleteBusiness(btn.dataset.id,{blockOwner:true,reason});showToast('Empresa eliminada y cuenta bloqueada en Fila Cero.');await loadAdmin()}catch(err){btn.disabled=false;showToast(humanError(err))}
+    }));
+  }
+
+  async function loadAdmin(){
+    try{
+      const [businessRows,blockedRows]=await Promise.all([FCAUTH.adminListBusinesses(),FCAUTH.adminListBlocked()]);
+      businesses=businessRows||[];blocked=blockedRows||[];renderBusinesses();renderBlocked();
+    }catch(err){showToast(humanError(err));console.error(err)}
+  }
+
+  search?.addEventListener('input',renderBusinesses);
+  await loadAdmin();
+}
+
 document.addEventListener('DOMContentLoaded',()=>{
   initTopbar();
   initMarketplace().catch(console.error);
   initProfessional().catch(console.error);
   initBusinessProfile().catch(console.error);
+  initAdmin().catch(console.error);
 });

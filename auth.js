@@ -4,6 +4,13 @@
   const db = cfg.db || {};
   const T_BUSINESSES = db.businessesTable || 'fila_cero_businesses';
   const PORTFOLIO_BUCKET = db.portfolioBucket || 'fila-cero-portfolio';
+  const RPC_DELETE_MY_BUSINESS = db.deleteMyBusinessRpc || 'fila_cero_delete_my_business';
+  const RPC_ADMIN_STATUS = db.adminStatusRpc || 'fila_cero_is_admin';
+  const RPC_BLOCKED_STATUS = db.blockedStatusRpc || 'fila_cero_is_current_user_blocked';
+  const RPC_ADMIN_LIST_BUSINESSES = db.adminListBusinessesRpc || 'fila_cero_admin_list_businesses';
+  const RPC_ADMIN_DELETE_BUSINESS = db.adminDeleteBusinessRpc || 'fila_cero_admin_delete_business';
+  const RPC_ADMIN_LIST_BLOCKED = db.adminListBlockedRpc || 'fila_cero_admin_list_blocked';
+  const RPC_ADMIN_UNBLOCK = db.adminUnblockRpc || 'fila_cero_admin_unblock_owner';
   const COMMUNES=['Concepción','Talcahuano','Hualpén','San Pedro de la Paz','Chiguayante','Penco','Tomé','Hualqui','Coronel','Lota','Santa Juana'];
 
   function assertClient(){
@@ -24,6 +31,23 @@
     return data?.user || null;
   }
 
+
+  async function isAdmin(){
+    const session=await getSession();
+    if(!session) return false;
+    const {data,error}=await sb.rpc(RPC_ADMIN_STATUS);
+    if(error) throw error;
+    return data===true;
+  }
+
+  async function isBlocked(){
+    const session=await getSession();
+    if(!session) return false;
+    const {data,error}=await sb.rpc(RPC_BLOCKED_STATUS);
+    if(error) throw error;
+    return data===true;
+  }
+
   // IMPORTANTE: no existe trigger global de auth.users para Fila Cero.
   // El perfil se crea únicamente cuando una persona entra a ESTA aplicación.
   async function ensureBusiness(user,businessName=''){
@@ -32,6 +56,8 @@
     let {data,error}=await sb.from(T_BUSINESSES).select('*').eq('owner_id',user.id).maybeSingle();
     if(error) throw error;
     if(data) return normalizeBusiness(data);
+
+    if(await isBlocked()) throw new Error('FILA_CERO_ACCOUNT_BLOCKED');
 
     const fallback=(
       businessName ||
@@ -95,7 +121,15 @@
       password:String(password||'')
     });
     if(error) throw error;
-    if(data?.user) await ensureBusiness(data.user);
+    if(data?.user){
+      try{ await ensureBusiness(data.user); }
+      catch(err){
+        if(String(err?.message||'').includes('FILA_CERO_ACCOUNT_BLOCKED')){
+          await sb.auth.signOut();
+        }
+        throw err;
+      }
+    }
     return data;
   }
 
@@ -170,7 +204,29 @@
       window.location.href='login.html?next=profesional.html';
       return null;
     }
-    return ensureBusiness(session.user);
+    try{
+      return await ensureBusiness(session.user);
+    }catch(err){
+      if(String(err?.message||'').includes('FILA_CERO_ACCOUNT_BLOCKED')){
+        await sb.auth.signOut();
+        window.location.href='login.html?blocked=1';
+        return null;
+      }
+      throw err;
+    }
+  }
+
+  async function requireAdmin(){
+    const session=await getSession();
+    if(!session){
+      window.location.href='login.html?next=admin.html';
+      return null;
+    }
+    if(!(await isAdmin())){
+      window.location.href='profesional.html';
+      return null;
+    }
+    return session.user;
   }
 
   async function uploadPortfolio(files){
@@ -195,6 +251,63 @@
     return urls;
   }
 
+
+  async function removePortfolioFolder(ownerId){
+    if(!ownerId) return;
+    const {data,error}=await sb.storage.from(PORTFOLIO_BUCKET).list(String(ownerId),{
+      limit:1000,
+      offset:0,
+      sortBy:{column:'name',order:'asc'}
+    });
+    if(error) throw error;
+    const paths=(data||[]).filter(item=>item?.id!==null).map(item=>`${ownerId}/${item.name}`);
+    if(!paths.length) return;
+    const removed=await sb.storage.from(PORTFOLIO_BUCKET).remove(paths);
+    if(removed.error) throw removed.error;
+  }
+
+  async function deleteMyBusiness(){
+    const user=await currentUser();
+    if(!user) throw new Error('AUTH_REQUIRED');
+    await removePortfolioFolder(user.id);
+    const {data,error}=await sb.rpc(RPC_DELETE_MY_BUSINESS);
+    if(error) throw error;
+    await logout();
+    return data;
+  }
+
+  async function adminListBusinesses(){
+    const {data,error}=await sb.rpc(RPC_ADMIN_LIST_BUSINESSES);
+    if(error) throw error;
+    return data||[];
+  }
+
+  async function adminDeleteBusiness(businessId,{blockOwner=true,reason='Contenido o uso no permitido en Fila Cero'}={}){
+    if(!businessId) throw new Error('BUSINESS_ID_REQUIRED');
+    const businesses=await adminListBusinesses();
+    const target=businesses.find(item=>item.id===businessId);
+    if(target?.owner_id) await removePortfolioFolder(target.owner_id);
+    const {data,error}=await sb.rpc(RPC_ADMIN_DELETE_BUSINESS,{
+      p_business_id:businessId,
+      p_block_owner:!!blockOwner,
+      p_reason:String(reason||'').trim()||'Moderación de Fila Cero'
+    });
+    if(error) throw error;
+    return data;
+  }
+
+  async function adminListBlocked(){
+    const {data,error}=await sb.rpc(RPC_ADMIN_LIST_BLOCKED);
+    if(error) throw error;
+    return data||[];
+  }
+
+  async function adminUnblockOwner(ownerId){
+    const {data,error}=await sb.rpc(RPC_ADMIN_UNBLOCK,{p_owner_id:ownerId});
+    if(error) throw error;
+    return data===true;
+  }
+
   function normalizeBusiness(b){
     if(!b)return null;
     return {
@@ -210,6 +323,8 @@
     getSession,
     currentUser,
     currentBusiness,
+    isAdmin,
+    isBlocked,
     createAccount,
     login,
     logout,
@@ -217,7 +332,14 @@
     getBusiness,
     googleLogin,
     requireBusiness,
+    requireAdmin,
     uploadPortfolio,
+    removePortfolioFolder,
+    deleteMyBusiness,
+    adminListBusinesses,
+    adminDeleteBusiness,
+    adminListBlocked,
+    adminUnblockOwner,
     normalizeBusiness
   };
 })();

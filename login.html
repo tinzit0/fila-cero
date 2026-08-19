@@ -73,7 +73,7 @@
     msg.append(icon,body);
   };
 
-  const friendly=e=>{const m=String(e?.message||e||'Error');if(m.includes('Invalid login credentials'))return 'Correo o contraseña incorrectos.';if(m.includes('User already registered'))return 'Ya existe una cuenta con ese correo.';if(m.toLowerCase().includes('email not confirmed'))return 'Todavía falta confirmar tu correo. Revisa el mensaje que te enviamos y pulsa el enlace de confirmación.';if(m.toLowerCase().includes('email rate limit exceeded'))return 'No pudimos enviar otro correo de confirmación por ahora. Puedes esperar un momento o continuar con Google.';if(m.toLowerCase().includes('unsupported provider')||m.toLowerCase().includes('provider is not enabled'))return 'Google todavía no está activado en Supabase. Activa Authentication → Sign In / Providers → Google.';return m};
+  const friendly=e=>{const m=String(e?.message||e||'Error');if(m.includes('Invalid login credentials'))return 'Correo o contraseña incorrectos.';if(m.includes('User already registered'))return 'Ya existe una cuenta con ese correo.';if(m.toLowerCase().includes('email not confirmed'))return 'Todavía falta confirmar tu correo. Revisa el mensaje que te enviamos y pulsa el enlace de confirmación.';if(m.toLowerCase().includes('email rate limit exceeded'))return 'No pudimos enviar otro correo de confirmación por ahora. Puedes esperar un momento o continuar con Google.';if(m.toLowerCase().includes('unsupported provider')||m.toLowerCase().includes('provider is not enabled'))return 'Google todavía no está activado en Supabase. Activa Authentication → Sign In / Providers → Google.';if(m.includes('FILA_CERO_ACCOUNT_BLOCKED'))return 'Esta cuenta fue bloqueada dentro de Fila Cero por moderación. Tus otras aplicaciones de Supabase no se ven afectadas.';return m};
 
   function activateTab(name,{keepMessage=false}={}){
     tabs.forEach(x=>x.classList.toggle('active',x.dataset.tab===name));
@@ -87,6 +87,9 @@
   loginForm.addEventListener('submit',async e=>{e.preventDefault();const b=e.submitter||e.currentTarget.querySelector('button[type=submit]');b.disabled=true;b.textContent='Ingresando…';try{await FCAUTH.login(loginEmail.value,loginPassword.value);location.href='profesional.html'}catch(err){show(friendly(err))}finally{b.disabled=false;b.innerHTML='Entrar al dashboard <span>→</span>'}});
   registerForm.addEventListener('submit',async e=>{e.preventDefault();const b=e.submitter||e.currentTarget.querySelector('button[type=submit]');b.disabled=true;b.textContent='Creando cuenta…';try{const email=registerEmail.value.trim();const result=await FCAUTH.createAccount({businessName:registerBusiness.value,email,password:registerPassword.value});if(result.needsEmailConfirmation){loginEmail.value=email;activateTab('login',{keepMessage:true});showEmailConfirmation(email);loginPassword.focus()}else{location.href='profesional.html'}}catch(err){show(friendly(err))}finally{b.disabled=false;b.innerHTML='Crear cuenta <span>→</span>'}});
   document.getElementById('googleLoginBtn').addEventListener('click',async()=>{try{await FCAUTH.googleLogin()}catch(err){show(friendly(err))}});
+  const params=new URLSearchParams(location.search);
+  if(params.get('blocked')==='1') show('Esta cuenta fue bloqueada dentro de Fila Cero por moderación. Si crees que es un error, contacta al administrador.','error');
+  if(params.get('deleted')==='1') show('Tu empresa y sus datos fueron eliminados de Fila Cero. Puedes crear un perfil nuevo cuando quieras.','success');
   (async()=>{try{const session=await FCAUTH.getSession();if(session) location.href='profesional.html'}catch(err){console.error(err)}})();
 </script>
 </body></html>

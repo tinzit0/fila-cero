@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#071710">
+  <title>Fila Cero — Administración</title><link rel="stylesheet" href="styles.css">
+</head>
+<body class="pro-body admin-body">
+<header class="topbar topbar-dark">
+  <a class="brand brand-light" href="index.html"><span class="brand-mark">0</span><span class="brand-copy"><strong>FILA CERO</strong><small>Administración</small></span></a>
+  <nav><a href="index.html">Marketplace</a><a href="profesional.html">Mi empresa</a><button id="adminLogoutBtn" class="nav-ghost-btn" type="button">Cerrar sesión</button><span class="pro-badge admin-badge">ADMIN</span></nav>
+</header>
+<main class="pro-main premium-pro-main admin-main" id="adminPage">
+  <section class="pro-hero premium-pro-hero admin-hero">
+    <div><span class="eyebrow light">MODERACIÓN FILA CERO</span><h1>Panel de <em>administración.</em></h1><p>Revisa las empresas registradas, perfiles ocultos y cuentas bloqueadas exclusivamente dentro de Fila Cero.</p></div>
+    <div class="stats-cluster three-stats"><article class="stat-card dark-stat"><span>EMPRESAS</span><strong id="adminBusinessCount">0</strong><small>registradas</small></article><article class="stat-card"><span>PERFILES</span><strong id="adminPublicCount">0</strong><small>públicos</small></article><article class="stat-card"><span>BLOQUEADOS</span><strong id="adminBlockedCount">0</strong><small>por moderación</small></article></div>
+  </section>
+
+  <section class="panel dashboard-section">
+    <div class="panel-heading split-heading"><div><span class="eyebrow">EMPRESAS REGISTRADAS</span><h2>Directorio administrativo</h2><p>Incluye perfiles visibles y ocultos. El usuario de autenticación compartida no se elimina nunca desde este panel.</p></div><label class="admin-search">Buscar<input id="adminBusinessSearch" type="search" placeholder="Nombre, correo, comuna o rubro"></label></div>
+    <div id="adminBusinessList" class="admin-business-list"></div>
+  </section>
+
+  <section class="panel dashboard-section">
+    <div class="panel-heading"><span class="eyebrow">CUENTAS BLOQUEADAS</span><h2>Bloqueos de Fila Cero</h2><p>Estas personas conservan su usuario de Supabase para tus otras aplicaciones, pero no pueden recrear una empresa en Fila Cero hasta ser desbloqueadas.</p></div>
+    <div id="adminBlockedList" class="admin-blocked-list"></div>
+  </section>
+</main>
+<div class="toast hidden" id="toast" aria-live="polite"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script><script src="supabase-client.js"></script><script src="auth.js"></script><script src="app.js"></script>
+</body></html>

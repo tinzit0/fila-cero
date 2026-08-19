@@ -7,7 +7,7 @@
 <body class="pro-body">
 <header class="topbar topbar-dark">
   <a class="brand brand-light" href="index.html"><span class="brand-mark">0</span><span class="brand-copy"><strong>FILA CERO</strong><small>Business</small></span></a>
-  <nav><a href="index.html">Marketplace</a><a id="publicProfileLink" href="empresa.html">Perfil público</a><button id="logoutBtn" class="nav-ghost-btn" type="button">Cerrar sesión</button><span class="pro-badge">PRO</span></nav>
+  <nav><a href="index.html">Marketplace</a><a id="publicProfileLink" href="empresa.html">Perfil público</a><a id="adminPanelLink" class="hidden" href="admin.html">Administración</a><button id="logoutBtn" class="nav-ghost-btn" type="button">Cerrar sesión</button><span class="pro-badge">PRO</span></nav>
 </header>
 <main class="pro-main premium-pro-main">
   <section class="pro-hero premium-pro-hero dashboard-hero">
@@ -73,6 +73,11 @@
   <section class="panel dashboard-section" id="reservas">
     <div class="panel-heading"><span class="eyebrow">CLIENTES AGENDADOS</span><h2>Horas reservadas</h2><p>Aquí aparecen únicamente las reservas realizadas en cupos publicados por tu empresa.</p></div>
     <div id="businessReservations" class="business-reservations"></div>
+  </section>
+
+  <section class="panel dashboard-section danger-zone" id="eliminar-empresa">
+    <div class="panel-heading"><span class="eyebrow danger-eyebrow">ZONA DE RIESGO</span><h2>Eliminar mi empresa de Fila Cero</h2><p>Elimina tu perfil, horas publicadas, reservas y fotografías guardadas en Fila Cero. Tu cuenta de acceso de Supabase NO se elimina porque este proyecto comparte autenticación con otras aplicaciones.</p></div>
+    <div class="danger-zone-row"><div><strong>Volver a empezar desde cero</strong><span>Después de eliminarla se cerrará tu sesión. Si vuelves a ingresar más adelante, podrás crear un perfil nuevo.</span></div><button id="deleteMyBusinessBtn" class="btn btn-danger" type="button">Eliminar mi empresa</button></div>
   </section>
 </main>
 <div class="toast hidden" id="toast" aria-live="polite"></div>
