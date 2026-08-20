@@ -1,0 +1,11 @@
+[functions.fila-cero-push-config]
+verify_jwt = false
+
+[functions.fila-cero-dispatch]
+verify_jwt = false
+
+[functions.fila-cero-create-payment]
+verify_jwt = false
+
+[functions.fila-cero-mercadopago-webhook]
+verify_jwt = false

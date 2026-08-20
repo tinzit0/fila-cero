@@ -3,6 +3,8 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#071710">
   <title>Fila Cero — Crear cuenta o iniciar sesión</title><link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
 </head>
 <body class="auth-body">
 <header class="topbar topbar-dark"><a class="brand brand-light" href="index.html"><span class="brand-mark">0</span><span class="brand-copy"><strong>FILA CERO</strong><small>Empresas y profesionales</small></span></a><nav><a href="index.html">Volver al marketplace</a></nav></header>
@@ -77,5 +79,5 @@
   if(params.get('deleted')==='1')show('Tu empresa y sus datos fueron eliminados de Fila Cero.','success');
   (async()=>{try{const session=await FCAUTH.getSession();if(session&&requestedNext)location.href=requestedNext}catch(err){console.error(err)}})();
 </script>
-<script src="app.js"></script><script src="features-v013.js"></script>
+<script src="app.js"></script><script src="features-v013.js"></script><script src="calendar.js"></script><script src="pwa.js"></script><script src="features-v014.js"></script>
 </body></html>

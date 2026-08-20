@@ -1,5 +1,5 @@
 /*
-  FILA CERO — v0.13 / plataforma completa
+  FILA CERO — v0.14 / PWA + automatizaciones
 
   Este proyecto usa tablas y recursos EXCLUSIVOS de Fila Cero.
   No uses aquí service_role ni secret keys.
@@ -18,6 +18,8 @@ window.FC_CONFIG = {
     slotsTable: "fila_cero_slots",
     reservationsTable: "fila_cero_reservations",
     bookingRpc: "fila_cero_book_slot",
+    startBookingRpc: "fila_cero_start_booking",
+    paymentStatusRpc: "fila_cero_payment_status",
     cancelReservationRpc: "fila_cero_cancel_reservation",
     deleteReservationRpc: "fila_cero_delete_reservation",
     deleteMyBusinessRpc: "fila_cero_delete_my_business",
@@ -31,6 +33,7 @@ window.FC_CONFIG = {
     reviewsTable: "fila_cero_reviews",
     alertsTable: "fila_cero_alert_preferences",
     notificationsTable: "fila_cero_notifications",
+    pushSubscriptionsTable: "fila_cero_push_subscriptions",
     reportsTable: "fila_cero_reports",
     submitReviewRpc: "fila_cero_submit_review",
     claimReservationsRpc: "fila_cero_claim_reservations",
@@ -40,5 +43,11 @@ window.FC_CONFIG = {
     adminListReportsRpc: "fila_cero_admin_list_reports",
     adminUpdateReportRpc: "fila_cero_admin_update_report",
     portfolioBucket: "fila-cero-portfolio"
+  },
+  edge: {
+    pushConfig: "fila-cero-push-config",
+    createPayment: "fila-cero-create-payment",
+    paymentWebhook: "fila-cero-mercadopago-webhook",
+    dispatcher: "fila-cero-dispatch"
   }
 };

@@ -1,0 +1,283 @@
+FILA CERO v0.14 — INSTALACIÓN DE PWA, PUSH, CALENDARIO, RECORDATORIOS Y ABONOS
+================================================================================
+
+PROYECTO
+--------
+Web: https://fila-cero.concepcion.workers.dev/
+Supabase: kxldsjodgfonrrlwjbws
+
+IMPORTANTE
+----------
+- Esta versión sigue aislada dentro del Supabase compartido.
+- Los objetos nuevos usan solamente nombres fila_cero_*.
+- NO vuelvas a ejecutar SQL antiguos.
+- NO pongas Access Tokens, secretos, service_role ni claves privadas en config.js o GitHub.
+- PWA + Google Calendar funcionan apenas publiques los archivos web.
+- Push, email, WhatsApp y Mercado Pago requieren configurar servicios externos y Edge Functions.
+
+===============================================================================
+1. SQL — EJECUTAR UNA SOLA VEZ
+===============================================================================
+
+Supabase -> SQL Editor -> New query
+
+Pega y ejecuta:
+  SQL-PATCH-FILA-CERO-V0.14-PWA-AUTOMATIZACIONES.sql
+
+El parche agrega solamente elementos de Fila Cero, entre ellos:
+- abono opcional en fila_cero_slots
+- estado de pago y preferencias de recordatorio en fila_cero_reservations
+- fila_cero_push_subscriptions
+- fila_cero_delivery_queue
+- fila_cero_payments
+- fila_cero_start_booking(...)
+- fila_cero_payment_status(...)
+- funciones privadas para el dispatcher
+
+No toca optica_*, hipso_*, yorka_*, devweb_*, donato_*, etc.
+
+===============================================================================
+2. SUBIR LA v0.14 A GITHUB / CLOUDFLARE
+===============================================================================
+
+Reemplaza los archivos del proyecto por los de esta carpeta, conservando .git.
+
+En VS Code:
+
+  git add .
+  git commit -m "Fila Cero v0.14 PWA push calendar recordatorios y abonos"
+  git push
+
+NO hagas un deployment manual antiguo en Cloudflare después del push.
+Deja que el build automático de main despliegue la última versión.
+
+La PWA quedará disponible mediante manifest.webmanifest + sw.js.
+En navegadores compatibles aparecerá "Instalar Fila Cero".
+
+===============================================================================
+3. EDGE FUNCTIONS DE SUPABASE
+===============================================================================
+
+La carpeta incluida es:
+
+  supabase/functions/
+    fila-cero-push-config/
+    fila-cero-dispatch/
+    fila-cero-create-payment/
+    fila-cero-mercadopago-webhook/
+
+Opción por CLI (desde la raíz del proyecto):
+
+  npx supabase@latest login
+  npx supabase@latest link --project-ref kxldsjodgfonrrlwjbws
+  npx supabase@latest functions deploy fila-cero-push-config --no-verify-jwt
+  npx supabase@latest functions deploy fila-cero-dispatch --no-verify-jwt
+  npx supabase@latest functions deploy fila-cero-create-payment --no-verify-jwt
+  npx supabase@latest functions deploy fila-cero-mercadopago-webhook --no-verify-jwt
+
+También se incluye supabase/config.toml con verify_jwt=false solamente para estas
+funciones. Cada endpoint sensible valida sus propios tokens/secretos.
+
+===============================================================================
+4. PUSH CON LA PÁGINA CERRADA — VAPID
+===============================================================================
+
+Genera un par VAPID. En una terminal con Node.js:
+
+  npx web-push generate-vapid-keys
+
+Obtendrás:
+  Public Key
+  Private Key
+
+En Supabase -> Edge Functions -> Secrets agrega:
+
+  VAPID_PUBLIC_KEY=<public key>
+  VAPID_PRIVATE_KEY=<private key>
+  VAPID_SUBJECT=mailto:martinub250@gmail.com
+
+NUNCA pongas VAPID_PRIVATE_KEY en GitHub.
+
+Después, en Fila Cero -> Mi cuenta -> App y avisos -> Activar push.
+El navegador pedirá permiso y la suscripción se guardará en:
+  fila_cero_push_subscriptions
+
+===============================================================================
+5. CRON PARA ENVIAR PUSH / EMAIL / WHATSAPP Y LIBERAR PAGOS VENCIDOS
+===============================================================================
+
+Crea un secreto aleatorio largo, por ejemplo de 40+ caracteres, y guárdalo en:
+
+Supabase -> Edge Functions -> Secrets
+
+  FILA_CERO_CRON_SECRET=<tu secreto aleatorio>
+
+Luego ve a Supabase -> Integrations / Cron / Jobs (el nombre puede variar) y crea:
+
+  Nombre: fila-cero-dispatch-v014
+  Frecuencia: cada 1 minuto
+  Tipo: HTTP request / Edge Function
+  Método: POST
+  URL:
+  https://kxldsjodgfonrrlwjbws.supabase.co/functions/v1/fila-cero-dispatch
+
+Header adicional:
+  x-fila-cero-cron: <EL MISMO FILA_CERO_CRON_SECRET>
+
+Este job procesa exclusivamente fila_cero_delivery_queue y también libera holds
+de abonos vencidos. No ejecuta lógica de otras aplicaciones.
+
+===============================================================================
+6. EMAIL — RESEND
+===============================================================================
+
+La v0.14 está preparada para Resend.
+
+Crea una cuenta/proyecto en Resend y un API key.
+Para producción conviene verificar un dominio propio de Fila Cero.
+
+En Supabase -> Edge Functions -> Secrets agrega:
+
+  RESEND_API_KEY=<tu clave Resend>
+  RESEND_FROM=Fila Cero <reservas@TU-DOMINIO.cl>
+
+El dispatcher enviará recordatorios, si el usuario los seleccionó:
+- 24 horas antes
+- 2 horas antes
+
+Si Resend no está configurado, el resto de Fila Cero sigue funcionando.
+
+===============================================================================
+7. WHATSAPP — META WHATSAPP BUSINESS PLATFORM
+===============================================================================
+
+Debes tener una cuenta de WhatsApp Business Platform / Cloud API y una plantilla
+aprobada para recordatorios iniciados por la empresa.
+
+La plantilla que espera esta versión usa 4 variables de cuerpo, en este orden:
+  1) nombre del cliente
+  2) servicio
+  3) fecha y hora
+  4) nombre del centro/profesional
+
+En Supabase -> Edge Functions -> Secrets agrega:
+
+  WHATSAPP_MESSAGES_URL=<URL completa .../PHONE_NUMBER_ID/messages>
+  WHATSAPP_ACCESS_TOKEN=<token servidor Meta>
+  WHATSAPP_TEMPLATE_REMINDER=<nombre de la plantilla aprobada>
+  WHATSAPP_TEMPLATE_LANGUAGE=es_CL
+
+El cliente decide si desea recordatorio por WhatsApp al reservar.
+
+===============================================================================
+8. GOOGLE CALENDAR
+===============================================================================
+
+Esta versión NO pide acceso de escritura permanente al calendario del usuario.
+Después de confirmar una reserva aparecen:
+
+  - Agregar a Google Calendar
+  - Descargar calendario (.ics)
+
+También aparecen en Mi cuenta -> Historial para reservas confirmadas.
+
+Ventaja: no necesitas agregar nuevos scopes OAuth de Google Calendar ni almacenar
+refresh tokens. El usuario confirma el evento directamente en Google Calendar.
+
+Si más adelante quieres sincronización automática/bidireccional, esa sería una
+fase distinta que requiere OAuth Calendar y manejo seguro de tokens.
+
+===============================================================================
+9. MERCADO PAGO — ABONO PARA ASEGURAR LA HORA
+===============================================================================
+
+La empresa puede marcar al publicar una hora:
+  "Solicitar abono para asegurar la reserva"
+
+y definir el monto.
+
+Al reservar:
+1) Fila Cero retiene la hora por 15 minutos.
+2) El backend crea una preferencia Checkout Pro.
+3) La persona paga en Mercado Pago.
+4) El webhook consulta el pago directamente en la API de Mercado Pago.
+5) Si queda aprobado, la reserva pasa a CONFIRMED.
+6) Si falla/cancela, el cupo vuelve a estar disponible.
+
+Crea una aplicación de Mercado Pago y obtén el Access Token de PRODUCCIÓN.
+
+En Supabase -> Edge Functions -> Secrets agrega:
+
+  MERCADOPAGO_ACCESS_TOKEN=<ACCESS TOKEN>
+  FILA_CERO_APP_URL=https://fila-cero.concepcion.workers.dev/
+
+En Mercado Pago -> Tus integraciones -> Webhooks configura el evento PAGOS:
+
+  https://kxldsjodgfonrrlwjbws.supabase.co/functions/v1/fila-cero-mercadopago-webhook
+
+Después utiliza el simulador de Webhooks de Mercado Pago para comprobar que la
+URL responde correctamente.
+
+MUY IMPORTANTE SOBRE EL MODELO DE PAGOS
+---------------------------------------
+Esta v0.14 usa UNA cuenta de Mercado Pago: la cuenta cuyo Access Token configures.
+Por lo tanto, los abonos llegan a esa cuenta.
+
+No implementa todavía reparto automático del dinero a cada clínica/profesional.
+Un marketplace multi-vendedor real requiere onboarding y liquidación por vendedor
+con una integración/contrato específico del proveedor de pagos.
+
+Antes de cobrar abonos a escala real, define claramente:
+- quién recibe legalmente el dinero;
+- cuándo se devuelve un abono;
+- qué ocurre si el centro cancela;
+- comisiones de Fila Cero;
+- condiciones comerciales y tributarias.
+
+===============================================================================
+10. PRUEBAS RECOMENDADAS
+===============================================================================
+
+PWA:
+[ ] Abrir desde Android/Chrome y comprobar "Instalar Fila Cero".
+[ ] Instalar y abrir desde el icono.
+[ ] Activar modo avión después de haber abierto la app y comprobar offline.html.
+
+Push:
+[ ] Iniciar sesión en Mi cuenta.
+[ ] Activar push.
+[ ] Crear una alerta.
+[ ] Publicar desde otra empresa un cupo coincidente.
+[ ] Cerrar Fila Cero y comprobar el push después del próximo cron.
+
+Calendario:
+[ ] Reservar sin abono.
+[ ] Presionar Agregar a Google Calendar.
+[ ] Probar .ics.
+
+Recordatorios:
+[ ] Crear una reserva futura >24h.
+[ ] Revisar fila_cero_delivery_queue.
+[ ] Confirmar que el Cron pasa elementos de pending a sent.
+
+Mercado Pago:
+[ ] Probar primero con credenciales/usuarios de prueba recomendados por Mercado Pago.
+[ ] Publicar una hora con abono.
+[ ] Reservar y pagar.
+[ ] Comprobar reservation.status=confirmed y payment_status=paid.
+[ ] Probar pago rechazado/cancelado y comprobar que el cupo se libera.
+
+===============================================================================
+11. SEGURIDAD
+===============================================================================
+
+NUNCA subir a GitHub:
+- MERCADOPAGO_ACCESS_TOKEN
+- WHATSAPP_ACCESS_TOKEN
+- RESEND_API_KEY
+- VAPID_PRIVATE_KEY
+- FILA_CERO_CRON_SECRET
+- Supabase secret/service_role key
+
+Todos esos valores deben vivir solamente en Edge Function Secrets / dashboards.
+La publishable key que ya usa el frontend permanece protegida mediante RLS.

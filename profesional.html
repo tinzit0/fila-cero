@@ -3,6 +3,8 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#071710">
   <title>Fila Cero Business — Dashboard</title><link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
 </head>
 <body class="pro-body">
 <header class="topbar topbar-dark">
@@ -36,6 +38,10 @@
       <div class="form-row"><label>Categoría<select id="category" required><option value="Dental">Dental</option><option value="Kinesiología">Kinesiología</option><option value="Veterinaria">Veterinaria</option><option value="Psicología">Atención psicológica</option><option value="Nutrición">Nutrición</option><option value="Otro">Otro</option></select></label><label>Servicio disponible<input id="serviceName" required placeholder="Ej: Sesión de psicología adultos"></label></div>
       <div class="form-row triple-row"><label>Fecha<span class="date-control"><input id="slotDate" type="date" required></span></label><label>Hora<span class="date-control"><input id="slotTime" type="time" required></span></label><label>Duración (min)<input id="duration" type="number" min="10" step="5" value="60" required></label></div>
       <div class="form-row"><label>Precio normal<input id="normalPrice" type="number" min="0" step="1000" required placeholder="35000"></label><label>Precio Fila Cero<input id="filaPrice" type="number" min="0" step="1000" required placeholder="28000"></label></div>
+      <div class="deposit-config">
+        <label class="check deposit-check"><input id="requiresDeposit" type="checkbox"> <span><strong>Solicitar abono para asegurar la reserva</strong><small>La hora queda retenida durante 15 minutos mientras la persona paga.</small></span></label>
+        <label id="depositAmountWrap" class="deposit-amount-wrap disabled">Monto del abono<input id="depositAmount" type="number" min="1000" step="500" value="5000" disabled placeholder="5000"><small>Debe ser menor o igual al precio Fila Cero.</small></label>
+      </div>
       <div class="privacy-note"><strong>Especialmente para psicología:</strong> Fila Cero publica disponibilidad, profesional, modalidad, precio y ubicación. No solicita diagnóstico, motivo de consulta ni notas clínicas.</div>
       <button class="btn btn-accent btn-large" type="submit">Publicar hora <span>→</span></button>
     </form>
@@ -108,5 +114,5 @@
     </div>
   </footer>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js"></script><script src="supabase-client.js"></script><script src="auth.js"></script><script src="app.js"></script><script src="features-v013.js"></script>
+<script src="config.js"></script><script src="supabase-client.js"></script><script src="auth.js"></script><script src="app.js"></script><script src="features-v013.js"></script><script src="calendar.js"></script><script src="pwa.js"></script><script src="features-v014.js"></script>
 </body></html>

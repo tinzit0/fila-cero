@@ -9,6 +9,8 @@
   <title>Fila Cero Gran Concepción — Una hora acaba de liberarse</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><rect width=%2264%22 height=%2264%22 rx=%2218%22 fill=%22%23071710%22/><text x=%2232%22 y=%2244%22 text-anchor=%22middle%22 font-size=%2238%22 font-family=%22Arial%22 font-weight=%22900%22 fill=%22%2339d47d%22>0</text></svg>" />
   <link rel="stylesheet" href="styles.css" />
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
 </head>
 <body>
   <header class="topbar">
@@ -226,7 +228,12 @@
             <label>Nombre completo<input id="clientName" required autocomplete="name" placeholder="Ej: Camila Rojas"></label>
             <label>Correo<input id="clientEmail" required type="email" autocomplete="email" placeholder="nombre@correo.cl"></label>
             <label>Teléfono<input id="clientPhone" required type="tel" autocomplete="tel" placeholder="+56 9 1234 5678"></label>
-            <label class="check"><input type="checkbox" required> <span>Acepto que Fila Cero use estos datos únicamente para gestionar esta reserva.</span></label>
+            <fieldset class="reminder-options"><legend>Recordatorios de esta hora</legend>
+              <label class="check"><input id="reminderEmail" type="checkbox" checked> <span>Correo electrónico · 24 h y 2 h antes</span></label>
+              <label class="check"><input id="reminderWhatsapp" type="checkbox"> <span>WhatsApp · 24 h y 2 h antes</span></label>
+              <label class="check"><input id="reminderPush" type="checkbox" checked> <span>Notificación push · si tienes cuenta y activaste avisos</span></label>
+            </fieldset>
+            <label class="check"><input id="bookingPrivacy" type="checkbox" required> <span>Acepto que Fila Cero use estos datos únicamente para gestionar esta reserva y los recordatorios elegidos.</span></label>
             <button class="btn btn-accent btn-full" type="submit">Confirmar reserva <span>→</span></button>
           </form>
         </div>
@@ -234,6 +241,21 @@
           <div id="bookingMap" class="map-shell"></div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <div class="modal hidden" id="bookingSuccessModal" role="dialog" aria-modal="true" aria-labelledby="bookingSuccessTitle">
+    <div class="modal-card booking-success-card">
+      <button class="modal-close" id="closeBookingSuccess" aria-label="Cerrar">×</button>
+      <div class="success-orb">✓</div>
+      <span class="eyebrow">RESERVA CONFIRMADA</span>
+      <h2 id="bookingSuccessTitle">Tu hora quedó lista.</h2>
+      <div id="bookingSuccessSummary" class="booking-success-summary"></div>
+      <div class="calendar-actions">
+        <a id="bookingGoogleCalendar" class="btn btn-dark" target="_blank" rel="noopener">Agregar a Google Calendar ↗</a>
+        <button id="bookingDownloadIcs" class="btn btn-outline" type="button">Descargar calendario (.ics)</button>
+      </div>
+      <div class="success-links"><a href="cuenta.html">Ver mi cuenta</a><button id="continueMarketplace" type="button">Seguir buscando</button></div>
     </div>
   </div>
 
@@ -268,6 +290,6 @@
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js"></script><script src="supabase-client.js"></script><script src="auth.js"></script><script src="app.js"></script><script src="features-v013.js"></script>
+<script src="config.js"></script><script src="supabase-client.js"></script><script src="auth.js"></script><script src="app.js"></script><script src="features-v013.js"></script><script src="calendar.js"></script><script src="pwa.js"></script><script src="features-v014.js"></script>
 </body>
 </html>
